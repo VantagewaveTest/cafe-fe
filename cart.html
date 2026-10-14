@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Daily Grind Café - Cart & Checkout</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-amber-50 min-h-screen flex flex-col justify-between font-sans pt-12">
+
+  <!-- Header -->
+  <header class="bg-amber-900 text-amber-100 shadow-md py-4 px-6 flex justify-between items-center fixed top-0 left-0 right-0 z-40">
+    <div class="text-xl font-bold tracking-wider flex items-center gap-2">
+      <span>☕</span> The Daily Grind Café
+    </div>
+    <nav class="space-x-6 text-sm font-medium">
+      <a href="index.html" class="hover:text-amber-300 transition">Home</a>
+      <a href="menu.html" class="hover:text-amber-300 transition">Menu</a>
+      <a href="cart.html" class="underline underline-offset-4">Cart</a>
+    </nav>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-grow max-w-4xl w-full mx-auto px-4 py-8 mb-12">
+    <div class="mb-6 flex justify-between items-center">
+      <h1 class="text-3xl font-bold text-amber-900">Your Café Cart</h1>
+      <a href="menu.html" class="text-amber-800 hover:text-amber-900 font-medium text-sm underline">← Back to Menu</a>
+    </div>
+
+    <div id="cart-content" class="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <!-- Items list -->
+      <div id="cart-items-container" class="md:col-span-2 space-y-4">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <!-- Summary & Checkout -->
+      <div class="bg-white rounded-2xl p-6 shadow-md border border-amber-200 h-fit">
+        <h2 class="text-lg font-bold text-amber-900 mb-4 pb-2 border-b border-amber-100">Order Summary</h2>
+        
+        <div class="space-y-3 text-sm text-amber-800 mb-6">
+          <div class="flex justify-between">
+            <span>Subtotal:</span>
+            <span id="summary-subtotal" class="font-semibold">$0.00</span>
+          </div>
+          <div class="flex justify-between">
+            <span>Tax (5%):</span>
+            <span id="summary-tax" class="font-semibold">$0.00</span>
+          </div>
+          <div class="flex justify-between pt-3 border-t border-amber-100 text-base font-bold text-amber-900">
+            <span>Total Amount:</span>
+            <span id="summary-total">$0.00</span>
+          </div>
+          <div class="flex justify-between pt-2 text-xs text-amber-700 bg-amber-50 p-2.5 rounded-lg border border-amber-100">
+            <span>Total Prep Time:</span>
+            <span id="summary-prep-time" class="font-bold">⏱️ 0s</span>
+          </div>
+        </div>
+
+        <div class="mb-6">
+          <label class="block text-xs font-bold text-amber-900 uppercase tracking-wide mb-2">Payment Option (Simulation)</label>
+          <div class="space-y-2 text-sm text-amber-800">
+            <label class="flex items-center gap-2.5 p-2.5 rounded-lg border border-amber-200 cursor-pointer hover:bg-amber-50">
+              <input type="radio" name="payment" value="card" checked class="text-amber-800 focus:ring-amber-700">
+              <span>💳 Credit / Debit Card</span>
+            </label>
+            <label class="flex items-center gap-2.5 p-2.5 rounded-lg border border-amber-200 cursor-pointer hover:bg-amber-50">
+              <input type="radio" name="payment" value="upi" class="text-amber-800 focus:ring-amber-700">
+              <span>📱 UPI / QR Code</span>
+            </label>
+            <label class="flex items-center gap-2.5 p-2.5 rounded-lg border border-amber-200 cursor-pointer hover:bg-amber-50">
+              <input type="radio" name="payment" value="cash" class="text-amber-800 focus:ring-amber-700">
+              <span>💵 Cash at Counter</span>
+            </label>
+          </div>
+        </div>
+
+        <button id="checkout-btn" onclick="placeOrder()" class="w-full bg-amber-800 hover:bg-amber-900 text-white py-3.5 rounded-xl font-semibold shadow-lg transition flex items-center justify-center gap-2">
+          Pay & Place Order
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-amber-950 text-amber-300/60 py-4 text-center text-xs">
+    &copy; 2026 The Daily Grind Café. Freshly brewed with love.
+  </footer>
+
+  <script src="app.js"></script>
+  <script>
+    let cart = JSON.parse(localStorage.getItem('cafe_cart')) || {};
+
+    function renderCart() {
+      const container = document.getElementById('cart-items-container');
+      const keys = Object.keys(cart);
+
+      if (keys.length === 0) {
+        container.innerHTML = `
+          <div class="bg-white rounded-2xl p-8 text-center shadow-md border border-amber-200">
+            <div class="text-5xl mb-3">🛒</div>
+            <h3 class="text-xl font-bold text-amber-900 mb-2">Your cart is empty</h3>
+            <p class="text-amber-700 text-sm mb-6">Looks like you haven't added any treats yet.</p>
+            <a href="menu.html" class="bg-amber-800 hover:bg-amber-900 text-white px-6 py-3 rounded-xl font-medium inline-block shadow transition">Browse Menu</a>
+          </div>
+        `;
+        document.getElementById('summary-subtotal').textContent = '$0.00';
+        document.getElementById('summary-tax').textContent = '$0.00';
+        document.getElementById('summary-total').textContent = '$0.00';
+        document.getElementById('summary-prep-time').textContent = '⏱️ 0s';
+        document.getElementById('checkout-btn').disabled = true;
+        document.getElementById('checkout-btn').classList.add('opacity-50', 'cursor-not-allowed');
+        return;
+      }
+
+      container.innerHTML = keys.map(id => {
+        const item = cart[id];
+        return `
+          <div class="bg-white rounded-2xl p-4 shadow-md border border-amber-200 flex items-center justify-between gap-4">
+            <div class="flex items-center gap-4">
+              <div class="text-3xl">${item.image || '☕'}</div>
+              <div>
+                <h4 class="font-bold text-amber-900">${item.name}</h4>
+                <p class="text-xs text-amber-700">$${item.price.toFixed(2)} each • ⏱️ ${item.prepTime * item.quantity}s prep</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-4">
+              <div class="flex items-center gap-2 border border-amber-200 rounded-lg overflow-hidden">
+                <button onclick="modifyQty('${id}', -1)" class="px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold">-</button>
+                <span class="px-2 font-semibold text-amber-900">${item.quantity}</span>
+                <button onclick="modifyQty('${id}', 1)" class="px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold">+</button>
+              </div>
+              <span class="font-bold text-amber-900 w-16 text-right">$${(item.price * item.quantity).toFixed(2)}</span>
+              <button onclick="removeItem('${id}')" class="text-red-500 hover:text-red-700 font-bold text-sm px-2">✕</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      calculateSummary();
+    }
+
+    function modifyQty(id, change) {
+      if (cart[id]) {
+        cart[id].quantity += change;
+        if (cart[id].quantity <= 0) {
+          delete cart[id];
+        }
+      }
+      localStorage.setItem('cafe_cart', JSON.stringify(cart));
+      renderCart();
+    }
+
+    function removeItem(id) {
+      delete cart[id];
+      localStorage.setItem('cafe_cart', JSON.stringify(cart));
+      renderCart();
+    }
+
+    function calculateSummary() {
+      let subtotal = 0;
+      let totalPrep = 0;
+      Object.values(cart).forEach(item => {
+        subtotal += item.price * item.quantity;
+        totalPrep += item.prepTime * item.quantity;
+      });
+
+      const tax = subtotal * 0.05;
+      const total = subtotal + tax;
+
+      document.getElementById('summary-subtotal').textContent = `$${subtotal.toFixed(2)}`;
+      document.getElementById('summary-tax').textContent = `$${tax.toFixed(2)}`;
+      document.getElementById('summary-total').textContent = `$${total.toFixed(2)}`;
+      document.getElementById('summary-prep-time').textContent = `⏱️ ${totalPrep} seconds`;
+    }
+
+    async function placeOrder() {
+      const items = Object.values(cart);
+      if (items.length === 0) {
+        alert('Your cart is empty.');
+        return;
+      }
+
+      let subtotal = items.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+      let totalAmount = subtotal + (subtotal * 0.05);
+
+      const btn = document.getElementById('checkout-btn');
+      btn.textContent = 'Processing Payment...';
+      btn.disabled = true;
+
+      try {
+        const response = await fetch(`${API_BASE}/orders`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items, totalAmount })
+        });
+        const data = await response.json();
+
+        if (data.success) {
+          // Set active order in localStorage with end timestamp
+          const endTime = Date.now() + (data.totalPrepTime * 1000);
+          setActiveOrder({
+            orderId: data.orderId,
+            endTime,
+            celebrated: false
+          });
+
+          // Clear cart
+          localStorage.removeItem('cafe_cart');
+          cart = {};
+
+          alert('Payment Successful! Order placed successfully.');
+          window.location.href = 'menu.html';
+        } else {
+          alert('Failed to place order: ' + data.message);
+          btn.textContent = 'Pay & Place Order';
+          btn.disabled = false;
+        }
+      } catch (err) {
+        console.error('Checkout error:', err);
+        alert('Network error connecting to backend. Please make sure cafe-be is running.');
+        btn.textContent = 'Pay & Place Order';
+        btn.disabled = false;
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', renderCart);
+  </script>
+</body>
+</html>

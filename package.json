@@ -1,0 +1,12 @@
+{
+  "name": "cafe-fe",
+  "version": "1.0.0",
+  "description": "Cafe Frontend",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx http-server -p 3000"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  }
+}
