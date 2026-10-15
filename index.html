@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>The Daily Grind Café - Welcome</title>
+  <title>The Daily Grind Café - Portal & Login</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-amber-50 min-h-screen flex flex-col justify-between font-sans">
@@ -13,28 +13,73 @@
     <div class="text-2xl font-bold tracking-wider flex items-center gap-2">
       <span>☕</span> The Daily Grind Café
     </div>
-    <nav class="space-x-6 text-sm font-medium">
-      <a href="index.html" class="underline underline-offset-4">Home</a>
+    <nav class="space-x-6 text-sm font-medium flex items-center">
+      <a href="index.html" class="underline underline-offset-4">Portal</a>
       <a href="menu.html" class="hover:text-amber-300 transition">Menu</a>
       <a href="cart.html" class="hover:text-amber-300 transition">Cart</a>
     </nav>
   </header>
 
-  <!-- Hero Section -->
+  <!-- Main Section: Welcome & Remodeled Login Portal -->
   <main class="flex-grow flex items-center justify-center px-4 py-12">
-    <div class="max-w-3xl text-center bg-white/80 backdrop-blur-md rounded-2xl shadow-xl p-8 md:p-12 border border-amber-200">
-      <div class="text-6xl mb-4">🥐☕🧇</div>
-      <h1 class="text-4xl md:text-5xl font-extrabold text-amber-900 mb-4 tracking-tight">
-        Welcome to The Daily Grind Café
-      </h1>
-      <p class="text-lg text-amber-800/80 mb-8 max-w-xl mx-auto">
-        Experience freshly brewed artisanal coffees, warm crispy waffles, melt-in-your-mouth cakes, and freshly baked biscuits. Order instantly right from your table!
-      </p>
-      <div class="flex flex-col sm:flex-row justify-center gap-4">
-        <a href="menu.html" class="bg-amber-700 hover:bg-amber-800 text-white font-semibold px-8 py-3.5 rounded-xl shadow-lg transition transform hover:-translate-y-0.5 text-lg">
-          Explore Menu ➔
-        </a>
+    <div class="max-w-4xl w-full grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+      
+      <!-- Left: Welcome Intro -->
+      <div class="text-center md:text-left bg-white/80 backdrop-blur-md rounded-2xl shadow-xl p-8 border border-amber-200">
+        <div class="text-5xl mb-4">🥐☕🧇</div>
+        <h1 class="text-3xl font-extrabold text-amber-900 mb-3 tracking-tight">
+          Welcome to The Daily Grind Café
+        </h1>
+        <p class="text-sm text-amber-800/80 mb-6 leading-relaxed">
+          Experience freshly brewed artisanal coffees, warm crispy waffles, melt-in-your-mouth cakes, and freshly baked biscuits. Log in according to your role to access your dedicated dashboard.
+        </p>
+        <div class="flex flex-wrap gap-3 justify-center md:justify-start">
+          <a href="menu.html" class="bg-amber-700 hover:bg-amber-800 text-white font-semibold px-6 py-2.5 rounded-xl shadow transition text-sm">
+            Browse Menu as Guest ➔
+          </a>
+        </div>
       </div>
+
+      <!-- Right: Remodeled Login Portal Card -->
+      <div class="bg-white rounded-2xl shadow-xl p-8 border border-amber-200">
+        <h2 class="text-xl font-bold text-amber-900 mb-4 text-center">🔐 Secure Role Portal</h2>
+        
+        <!-- Role Tabs -->
+        <div class="flex rounded-xl bg-amber-100 p-1 mb-6 text-xs font-semibold">
+          <button onclick="switchRoleTab('customer')" id="tab-customer" class="flex-1 py-2 rounded-lg bg-white text-amber-900 shadow transition">Customer</button>
+          <button onclick="switchRoleTab('chef')" id="tab-chef" class="flex-1 py-2 rounded-lg text-amber-800 hover:text-amber-900 transition">Chef</button>
+          <button onclick="switchRoleTab('waiter')" id="tab-waiter" class="flex-1 py-2 rounded-lg text-amber-800 hover:text-amber-900 transition">Waiter</button>
+        </div>
+
+        <!-- Login Form -->
+        <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-bold text-amber-900 uppercase tracking-wide mb-1" id="label-name">Your Name / ID</label>
+            <input type="text" id="login-name" required placeholder="e.g. Alex Customer" class="w-full px-4 py-2.5 rounded-xl border border-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-700 text-sm">
+          </div>
+          <div id="password-group">
+            <label class="block text-xs font-bold text-amber-900 uppercase tracking-wide mb-1">Staff Passcode</label>
+            <input type="password" id="login-pass" placeholder="••••" class="w-full px-4 py-2.5 rounded-xl border border-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-700 text-sm" disabled>
+            <p class="text-[11px] text-amber-700/70 mt-1" id="pass-hint">Customers do not require a passcode.</p>
+          </div>
+
+          <button type="submit" id="login-submit-btn" class="w-full bg-amber-800 hover:bg-amber-900 text-white py-3 rounded-xl font-semibold shadow transition text-sm">
+            Sign In as Customer
+          </button>
+        </form>
+
+        <!-- Quick Demo Section -->
+        <div class="mt-6 pt-4 border-t border-amber-100 text-center">
+          <p class="text-xs text-amber-800 font-medium mb-3">⚡ Quick Demo Logins (1-Click Access):</p>
+          <div class="flex flex-wrap gap-2 justify-center">
+            <button onclick="demoLogin('customer')" class="bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs px-3 py-1.5 rounded-lg font-medium transition">👤 Customer Demo</button>
+            <button onclick="demoLogin('chef')" class="bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs px-3 py-1.5 rounded-lg font-medium transition">👨‍🍳 Chef Demo</button>
+            <button onclick="demoLogin('waiter')" class="bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs px-3 py-1.5 rounded-lg font-medium transition">🛎️ Waiter Demo</button>
+          </div>
+        </div>
+
+      </div>
+
     </div>
   </main>
 
@@ -43,5 +88,94 @@
     &copy; 2026 The Daily Grind Café. Freshly brewed with love.
   </footer>
 
+  <script src="auth.js"></script>
+  <script>
+    let currentTabRole = 'customer';
+
+    function switchRoleTab(role) {
+      currentTabRole = role;
+      ['customer', 'chef', 'waiter'].forEach(r => {
+        const btn = document.getElementById(`tab-${r}`);
+        if (r === role) {
+          btn.className = 'flex-1 py-2 rounded-lg bg-white text-amber-900 shadow transition font-semibold';
+        } else {
+          btn.className = 'flex-1 py-2 rounded-lg text-amber-800 hover:text-amber-900 transition';
+        }
+      });
+
+      const passInput = document.getElementById('login-pass');
+      const nameInput = document.getElementById('login-name');
+      const submitBtn = document.getElementById('login-submit-btn');
+
+      if (role === 'customer') {
+        passInput.disabled = true;
+        passInput.value = '';
+        passInput.placeholder = '••••';
+        document.getElementById('pass-hint').textContent = 'Customers do not require a passcode.';
+        nameInput.placeholder = 'e.g. Alex Customer';
+        submitBtn.textContent = 'Sign In as Customer';
+      } else if (role === 'chef') {
+        passInput.disabled = false;
+        passInput.placeholder = 'chef123';
+        document.getElementById('pass-hint').textContent = 'Enter staff passcode (chef123)';
+        nameInput.placeholder = 'e.g. Chef Gordon';
+        submitBtn.textContent = 'Sign In as Chef';
+      } else if (role === 'waiter') {
+        passInput.disabled = false;
+        passInput.placeholder = 'waiter123';
+        document.getElementById('pass-hint').textContent = 'Enter staff passcode (waiter123)';
+        nameInput.placeholder = 'e.g. Waiter David';
+        submitBtn.textContent = 'Sign In as Waiter';
+      }
+    }
+
+    function handleLogin(event) {
+      event.preventDefault();
+      const name = document.getElementById('login-name').value.trim();
+      const pass = document.getElementById('login-pass').value.trim();
+
+      if (currentTabRole === 'chef' && pass !== 'chef123') {
+        alert('Invalid Chef Passcode. Use "chef123" for demo.');
+        return;
+      }
+      if (currentTabRole === 'waiter' && pass !== 'waiter123') {
+        alert('Invalid Waiter Passcode. Use "waiter123" for demo.');
+        return;
+      }
+
+      const user = { name, role: currentTabRole };
+      setCurrentUser(user);
+
+      if (currentTabRole === 'chef') {
+        window.location.href = 'chef.html';
+      } else if (currentTabRole === 'waiter') {
+        window.location.href = 'waiter.html';
+      } else {
+        window.location.href = 'menu.html';
+      }
+    }
+
+    function demoLogin(role) {
+      if (role === 'customer') {
+        setCurrentUser({ name: 'Demo Customer', role: 'customer' });
+        window.location.href = 'menu.html';
+      } else if (role === 'chef') {
+        setCurrentUser({ name: 'Chef Mario', role: 'chef' });
+        window.location.href = 'chef.html';
+      } else if (role === 'waiter') {
+        setCurrentUser({ name: 'Waiter Sarah', role: 'waiter' });
+        window.location.href = 'waiter.html';
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const existing = getCurrentUser();
+      if (existing) {
+        if (existing.role === 'chef') window.location.href = 'chef.html';
+        else if (existing.role === 'waiter') window.location.href = 'waiter.html';
+        else window.location.href = 'menu.html';
+      }
+    });
+  </script>
 </body>
 </html>
