@@ -1,5 +1,5 @@
 // Shared Client Script for Timer & Confetti
-const API_BASE = 'http://localhost:5001/api';
+const API_BASE = 'http://localhost:5000/api';
 
 // Inject confetti CDN dynamically if not present
 if (!window.confetti) {

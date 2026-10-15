@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Daily Grind Café - Order Lookup</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-amber-50 min-h-screen flex flex-col font-sans pt-12">
+
+  <!-- Header -->
+  <header class="bg-amber-900 text-amber-100 shadow-md py-4 px-6 flex justify-between items-center fixed top-0 left-0 right-0 z-40">
+    <div class="text-xl font-bold tracking-wider flex items-center gap-2">
+      <span>☕</span> The Daily Grind Café
+    </div>
+    <nav class="space-x-6 text-sm font-medium">
+      <a href="index.html" class="hover:text-amber-300 transition">Home</a>
+      <a href="menu.html" class="hover:text-amber-300 transition">Menu</a>
+      <a href="cart.html" class="hover:text-amber-300 transition">Cart</a>
+      <a href="orders-view.html" class="underline underline-offset-4">Order Lookup</a>
+    </nav>
+  </header>
+
+  <main class="flex-grow max-w-4xl w-full mx-auto px-4 py-8">
+    <div class="text-center mb-8">
+      <h1 class="text-3xl font-bold text-amber-900 mb-2">Order Lookup</h1>
+      <p class="text-amber-800/80 text-sm">The same order, seen differently — each role only sees what it is allowed to see.</p>
+    </div>
+
+    <!-- Role Tabs -->
+    <div class="flex justify-center gap-2 mb-6">
+      <button id="tab-customer" onclick="setRole('customer')" class="role-tab px-5 py-2.5 rounded-xl text-sm font-semibold bg-amber-800 text-white shadow transition">
+        👤 View as Customer
+      </button>
+      <button id="tab-chef" onclick="setRole('chef')" class="role-tab px-5 py-2.5 rounded-xl text-sm font-semibold bg-white text-amber-900 border border-amber-200 hover:bg-amber-100 transition">
+        👨‍🍳 View as Chef
+      </button>
+    </div>
+
+    <!-- Lookup form -->
+    <div class="bg-white rounded-2xl p-6 shadow-md border border-amber-200 mb-6">
+      <label class="block text-xs font-bold text-amber-900 uppercase tracking-wide mb-2">Order ID</label>
+      <div class="flex gap-3">
+        <input id="order-id-input" type="text" placeholder="e.g. ORD-1718000000000"
+               class="flex-grow border border-amber-200 rounded-xl px-4 py-2.5 text-sm text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-600">
+        <button onclick="lookupOrder()" class="bg-amber-800 hover:bg-amber-900 text-white px-6 py-2.5 rounded-xl font-semibold text-sm shadow transition">
+          Look Up
+        </button>
+      </div>
+      <p id="lookup-hint" class="text-xs text-amber-700 mt-2"></p>
+    </div>
+
+    <!-- Result -->
+    <div id="result-box" class="hidden space-y-4">
+      <!-- What this role CAN see -->
+      <div class="bg-white rounded-2xl p-6 shadow-md border border-amber-200">
+        <h2 class="text-lg font-bold text-amber-900 mb-1">✅ What this role sees</h2>
+        <p id="role-desc" class="text-xs text-amber-700 mb-4"></p>
+        <pre id="visible-data" class="bg-amber-50 border border-amber-100 rounded-xl p-4 text-xs text-amber-900 overflow-auto"></pre>
+      </div>
+
+      <!-- What this role CANNOT see -->
+      <div class="bg-white rounded-2xl p-6 shadow-md border border-amber-200">
+        <h2 class="text-lg font-bold text-red-800 mb-4">🚫 What is hidden from this role</h2>
+        <ul id="hidden-list" class="space-y-2 text-sm text-amber-800"></ul>
+      </div>
+    </div>
+
+    <!-- Error -->
+    <div id="error-box" class="hidden bg-red-50 border border-red-200 rounded-2xl p-6 text-center">
+      <p id="error-msg" class="text-red-700 font-medium"></p>
+    </div>
+  </main>
+
+  <footer class="bg-amber-950 text-amber-300/60 py-4 text-center text-xs">
+    &copy; 2026 The Daily Grind Café. Freshly brewed with love.
+  </footer>
+
+  <script src="app.js"></script>
+  <script>
+    let currentRole = 'customer';
+
+    const ROLE_INFO = {
+      customer: {
+        desc: 'Customers only ever see their own order — items, price, status and ETA. Chef and kitchen details stay private.',
+        hidden: [
+          '👨‍🍳 Chef / kitchen staff identity and activity',
+          '🍽️ Table assignments of other orders',
+          '💰 Internal payment routing details',
+          '🧾 Other customers\' orders (you must own the Order ID)'
+        ]
+      },
+      chef: {
+        desc: 'The kitchen sees WHAT to cook and WHERE (table) — never who ordered it or how much it cost.',
+        hidden: [
+          '🪪 Customer name and contact details',
+          '💰 Prices, totals and payment method',
+          '👤 Which customer booked the table'
+        ]
+      }
+    };
+
+    function setRole(role) {
+      currentRole = role;
+      ['customer', 'chef'].forEach(r => {
+        const btn = document.getElementById(`tab-${r}`);
+        const active = r === role;
+        btn.className = 'role-tab px-5 py-2.5 rounded-xl text-sm font-semibold transition ' +
+          (active ? 'bg-amber-800 text-white shadow' : 'bg-white text-amber-900 border border-amber-200 hover:bg-amber-100');
+      });
+      if (document.getElementById('order-id-input').value.trim()) lookupOrder();
+    }
+
+    function showError(msg) {
+      document.getElementById('result-box').classList.add('hidden');
+      document.getElementById('error-box').classList.remove('hidden');
+      document.getElementById('error-msg').textContent = msg;
+    }
+
+    async function lookupOrder() {
+      const id = document.getElementById('order-id-input').value.trim();
+      if (!id) {
+        showError('Please enter an Order ID.');
+        return;
+      }
+
+      document.getElementById('error-box').classList.add('hidden');
+
+      try {
+        const res = await fetch(`${API_BASE}/orders/${encodeURIComponent(id)}?role=${currentRole}`);
+        const data = await res.json();
+
+        if (!data.success) {
+          showError(data.message || 'Order not found.');
+          return;
+        }
+
+        const info = ROLE_INFO[currentRole];
+        document.getElementById('role-desc').textContent = info.desc;
+        document.getElementById('visible-data').textContent = JSON.stringify(data.order, null, 2);
+        document.getElementById('hidden-list').innerHTML = info.hidden
+          .map(h => `<li class="flex items-start gap-2"><span>🔒</span><span>${h}</span></li>`)
+          .join('');
+
+        document.getElementById('error-box').classList.add('hidden');
+        document.getElementById('result-box').classList.remove('hidden');
+      } catch (err) {
+        console.error('Lookup error:', err);
+        showError('Could not reach the backend. Make sure cafe-be is running on port 5000.');
+      }
+    }
+
+    // Prefill customer tab with the last placed order
+    window.addEventListener('DOMContentLoaded', () => {
+      const active = getActiveOrder();
+      const hint = document.getElementById('lookup-hint');
+      if (active && active.orderId) {
+        document.getElementById('order-id-input').value = active.orderId;
+        hint.textContent = 'Prefilled with your last order.';
+      } else {
+        hint.textContent = 'Tip: your Order ID is shown after checkout.';
+      }
+    });
+  </script>
+</body>
+</html>

@@ -17,6 +17,7 @@
       <a href="index.html" class="hover:text-amber-300 transition">Home</a>
       <a href="menu.html" class="hover:text-amber-300 transition">Menu</a>
       <a href="cart.html" class="underline underline-offset-4">Cart</a>
+      <a href="orders-view.html" class="hover:text-amber-300 transition">Order Lookup</a>
     </nav>
   </header>
 
@@ -32,7 +33,6 @@
       <div id="cart-items-container" class="md:col-span-2 space-y-4">
         <!-- Rendered dynamically -->
       </div>
-
       <!-- Summary & Checkout -->
       <div class="bg-white rounded-2xl p-6 shadow-md border border-amber-200 h-fit">
         <h2 class="text-lg font-bold text-amber-900 mb-4 pb-2 border-b border-amber-100">Order Summary</h2>
@@ -54,6 +54,12 @@
             <span>Total Prep Time:</span>
             <span id="summary-prep-time" class="font-bold">⏱️ 0s</span>
           </div>
+        </div>
+
+        <div class="mb-6">
+          <label class="block text-xs font-bold text-amber-900 uppercase tracking-wide mb-2">Table Number (optional)</label>
+          <input id="table-number" type="text" maxlength="20" placeholder="e.g. 5"
+                 class="w-full border border-amber-200 rounded-lg px-3 py-2.5 text-sm text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-600">
         </div>
 
         <div class="mb-6">
@@ -80,6 +86,23 @@
       </div>
     </div>
   </main>
+
+  <!-- Order Success -->
+  <div id="order-success" class="hidden flex-grow max-w-2xl w-full mx-auto px-4 py-12">
+    <div class="bg-white rounded-2xl p-8 text-center shadow-md border border-amber-200">
+      <div class="text-5xl mb-3">🎉</div>
+      <h2 class="text-2xl font-bold text-amber-900 mb-2">Payment Successful!</h2>
+      <p class="text-amber-700 text-sm mb-4">Your order has been placed and sent to the kitchen.</p>
+      <div class="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 mb-6">
+        <p class="text-xs text-amber-700 uppercase tracking-wide font-bold mb-1">Your Order ID</p>
+        <p id="success-order-id" class="text-lg font-mono font-bold text-amber-900"></p>
+      </div>
+      <div class="flex flex-col sm:flex-row justify-center gap-3">
+        <a href="orders-view.html" class="bg-amber-800 hover:bg-amber-900 text-white px-6 py-3 rounded-xl font-medium shadow transition">View Order Status</a>
+        <a href="menu.html" class="bg-amber-100 hover:bg-amber-200 text-amber-900 px-6 py-3 rounded-xl font-medium transition">Back to Menu</a>
+      </div>
+    </div>
+  </div>
 
   <!-- Footer -->
   <footer class="bg-amber-950 text-amber-300/60 py-4 text-center text-xs">
@@ -183,6 +206,9 @@
       let subtotal = items.reduce((sum, i) => sum + (i.price * i.quantity), 0);
       let totalAmount = subtotal + (subtotal * 0.05);
 
+      const paymentEl = document.querySelector('input[name="payment"]:checked');
+      const tableValue = document.getElementById('table-number').value;
+
       const btn = document.getElementById('checkout-btn');
       btn.textContent = 'Processing Payment...';
       btn.disabled = true;
@@ -191,7 +217,12 @@
         const response = await fetch(`${API_BASE}/orders`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ items, totalAmount })
+          body: JSON.stringify({
+            items,
+            totalAmount,
+            tableNumber: tableValue.trim() || null,
+            paymentMethod: paymentEl ? paymentEl.value : null
+          })
         });
         const data = await response.json();
 
@@ -208,8 +239,10 @@
           localStorage.removeItem('cafe_cart');
           cart = {};
 
-          alert('Payment Successful! Order placed successfully.');
-          window.location.href = 'menu.html';
+          // Show the Order ID so the customer can look it up later
+          document.getElementById('cart-content').classList.add('hidden');
+          document.getElementById('order-success').classList.remove('hidden');
+          document.getElementById('success-order-id').textContent = data.orderId;
         } else {
           alert('Failed to place order: ' + data.message);
           btn.textContent = 'Pay & Place Order';
