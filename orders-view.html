@@ -56,7 +56,7 @@
       <div class="bg-white rounded-2xl p-6 shadow-md border border-amber-200">
         <h2 class="text-lg font-bold text-amber-900 mb-1">✅ What this role sees</h2>
         <p id="role-desc" class="text-xs text-amber-700 mb-4"></p>
-        <pre id="visible-data" class="bg-amber-50 border border-amber-100 rounded-xl p-4 text-xs text-amber-900 overflow-auto"></pre>
+        <div id="visible-data" class="bg-amber-50 border border-amber-100 rounded-xl p-4 text-sm text-amber-900 space-y-2"></div>
       </div>
 
       <!-- What this role CANNOT see -->
@@ -117,6 +117,53 @@
       document.getElementById('error-msg').textContent = msg;
     }
 
+    // Render order data as readable rows (no raw JSON/code for end users)
+    function renderOrderView(order) {
+      const rows = [];
+      const addRow = (label, value) => {
+        rows.push(`
+          <div class="flex justify-between gap-4 border-b border-amber-100 last:border-b-0 py-2">
+            <span class="text-amber-700 font-medium">${label}</span>
+            <span class="text-amber-900 font-semibold text-right">${value}</span>
+          </div>`);
+      };
+
+      addRow('Order ID', `<span class="font-mono">${order.orderId}</span>`);
+      if (order.tableNumber) addRow('Table', `🍽️ ${order.tableNumber}`);
+      if (order.totalAmount !== undefined && order.totalAmount !== null) {
+        addRow('Total', `$${Number(order.totalAmount).toFixed(2)}`);
+      }
+
+      const items = (order.items || []).map(i => {
+        const qty = i.quantity || 1;
+        const name = i.name || i.id || 'Item';
+        const price = i.price !== undefined ? ` — $${Number(i.price).toFixed(2)}` : '';
+        const prep = i.prepTime ? ` <span class="text-xs text-amber-600">(⏱️ ${i.prepTime}s)</span>` : '';
+        return `<li class="flex justify-between gap-3"><span>${qty}× ${name}${price}</span>${i.prepTime ? `<span class="text-xs text-amber-600">⏱️ ${i.prepTime}s</span>` : ''}</li>`;
+      }).join('');
+
+      addRow('Items', '');
+      rows[rows.length - 1] = `
+        <div class="py-2 border-b border-amber-100">
+          <span class="text-amber-700 font-medium">Items</span>
+          <ul class="mt-1 space-y-1 text-right text-amber-900">${items}</ul>
+        </div>`;
+
+      const STATUS_COLORS = {
+        pending: 'bg-amber-100 text-amber-800',
+        preparing: 'bg-blue-100 text-blue-800',
+        ready: 'bg-emerald-100 text-emerald-800',
+        delivered: 'bg-emerald-100 text-emerald-800'
+      };
+      const statusKey = (order.status || 'pending').toLowerCase();
+      addRow('Status', `<span class="px-2.5 py-1 rounded-full text-xs font-bold ${STATUS_COLORS[statusKey] || 'bg-amber-100 text-amber-800'}">${(order.status || 'pending').toUpperCase()}</span>`);
+
+      if (order.totalPrepTime) addRow('Prep Time', `⏱️ ${order.totalPrepTime} sec`);
+      if (order.createdAt) addRow('Placed at', new Date(order.createdAt).toLocaleString());
+
+      return rows.join('');
+    }
+
     async function lookupOrder() {
       const id = document.getElementById('order-id-input').value.trim();
       if (!id) {
@@ -137,7 +184,7 @@
 
         const info = ROLE_INFO[currentRole];
         document.getElementById('role-desc').textContent = info.desc;
-        document.getElementById('visible-data').textContent = JSON.stringify(data.order, null, 2);
+        document.getElementById('visible-data').innerHTML = renderOrderView(data.order);
         document.getElementById('hidden-list').innerHTML = info.hidden
           .map(h => `<li class="flex items-start gap-2"><span>🔒</span><span>${h}</span></li>`)
           .join('');
