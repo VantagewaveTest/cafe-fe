@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Daily Grind Café - Staff Portal (Chef & Waiter)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 min-h-screen text-slate-100 font-sans flex flex-col justify-between">
+
+  <!-- Top Bar -->
+  <header class="bg-slate-950 border-b border-slate-800 py-3.5 px-6 flex justify-between items-center shadow-lg sticky top-0 z-50">
+    <div class="flex items-center gap-3">
+      <span class="text-2xl">☕</span>
+      <div>
+        <h1 class="text-lg font-bold text-amber-400 leading-tight">The Daily Grind Café • Staff Operations</h1>
+        <p class="text-xs text-slate-400">Restricted Staff Access (Chef & Waiter Only)</p>
+      </div>
+    </div>
+    <div id="auth-header-actions" class="flex items-center gap-4">
+      <a href="index.html" class="text-xs text-slate-400 hover:text-white transition">← Customer Frontend</a>
+      <div id="staff-profile-badge" class="hidden items-center gap-3">
+        <span id="staff-badge-role" class="px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40">Role</span>
+        <button onclick="staffLogout()" class="text-xs bg-rose-900/60 hover:bg-rose-800 text-rose-200 px-3 py-1.5 rounded-lg border border-rose-700 transition">
+          Log Out
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="flex-grow max-w-7xl w-full mx-auto p-4 md:p-6">
+
+    <!-- 1. Staff Login Screen (When Not Logged In) -->
+    <div id="staff-login-view" class="max-w-md mx-auto my-12 bg-slate-950 p-8 rounded-2xl border border-slate-800 shadow-2xl">
+      <div class="text-center mb-6">
+        <div class="text-4xl mb-2">🔐</div>
+        <h2 class="text-2xl font-bold text-white">Staff Authentication</h2>
+        <p class="text-xs text-slate-400 mt-1">Backend access is strictly restricted to Chef and Waiter roles.</p>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Username</label>
+          <input id="login-username" type="text" placeholder="chef or waiter" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Password</label>
+          <input id="login-password" type="password" placeholder="chef123 or waiter123" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500">
+        </div>
+
+        <div id="login-error" class="hidden text-xs text-rose-400 bg-rose-950/50 p-3 rounded-lg border border-rose-900"></div>
+
+        <button onclick="handleStaffLogin()" class="w-full bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold py-3 rounded-xl transition shadow-lg text-sm">
+          Log In to Staff Portal
+        </button>
+
+        <div class="pt-4 border-t border-slate-800/80 text-center">
+          <p class="text-xs text-slate-400 mb-3">Quick Login (One-Click Testing):</p>
+          <div class="flex gap-2">
+            <button onclick="quickLogin('chef', 'chef123')" class="flex-1 bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs py-2 px-3 rounded-lg border border-slate-700 transition">
+              👨‍🍳 Login as Chef
+            </button>
+            <button onclick="quickLogin('waiter', 'waiter123')" class="flex-1 bg-slate-800 hover:bg-slate-700 text-emerald-300 text-xs py-2 px-3 rounded-lg border border-slate-700 transition">
+              🤵 Login as Waiter
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Chef Dashboard View -->
+    <div id="chef-dashboard-view" class="hidden space-y-6">
+      <!-- Chef Header & Privacy Notice -->
+      <div class="bg-slate-950 p-5 rounded-2xl border border-slate-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-2xl">👨‍🍳</span>
+            <h2 class="text-xl font-bold text-amber-400">Kitchen Display System (Chef)</h2>
+            <span class="bg-amber-500/20 text-amber-300 text-[11px] px-2.5 py-0.5 rounded-full font-semibold border border-amber-500/30">Auto-Refreshing</span>
+          </div>
+          <p class="text-xs text-slate-400 mt-1">Accept incoming orders, cook, and mark ready for waiter pickup.</p>
+        </div>
+        <div class="bg-emerald-950/40 border border-emerald-800/50 text-emerald-300 px-3.5 py-2 rounded-xl text-xs flex items-center gap-2">
+          <span>🛡️</span>
+          <span><strong>Privacy Policy:</strong> Only Table # & Order items are visible. Customer personal info is hidden.</span>
+        </div>
+      </div>
+
+      <!-- Chef Orders Grid -->
+      <div id="chef-orders-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- 3. Waiter Dashboard View -->
+    <div id="waiter-dashboard-view" class="hidden space-y-6">
+      <!-- Waiter Header & Privacy Notice -->
+      <div class="bg-slate-950 p-5 rounded-2xl border border-slate-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-2xl">🤵</span>
+            <h2 class="text-xl font-bold text-emerald-400">Floor Delivery Board (Waiter)</h2>
+            <span class="bg-emerald-500/20 text-emerald-300 text-[11px] px-2.5 py-0.5 rounded-full font-semibold border border-emerald-500/30">Auto-Refreshing</span>
+          </div>
+          <p class="text-xs text-slate-400 mt-1">Pick up ready orders from kitchen and deliver directly to the assigned Table Number.</p>
+        </div>
+        <div class="bg-emerald-950/40 border border-emerald-800/50 text-emerald-300 px-3.5 py-2 rounded-xl text-xs flex items-center gap-2">
+          <span>🛡️</span>
+          <span><strong>Privacy Policy:</strong> Only Table # & Order items are visible. Customer personal info is hidden.</span>
+        </div>
+      </div>
+
+      <!-- Ready For Pickup (Urgent / High Priority) -->
+      <div>
+        <h3 class="text-sm font-bold text-amber-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+          <span>🔔</span> Ready for Table Delivery (<span id="waiter-ready-count">0</span>)
+        </h3>
+        <div id="waiter-ready-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+
+      <!-- In Preparation / Delivered History -->
+      <div class="pt-6 border-t border-slate-800">
+        <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-3">Other Orders Status</h3>
+        <div id="waiter-history-container" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <footer class="bg-slate-950 border-t border-slate-800/80 py-4 text-center text-xs text-slate-500">
+    The Daily Grind Café • Internal Staff Portal • Confidential
+  </footer>
+
+  <script>
+    const API_BASE = 'http://localhost:5000/api';
+
+    let currentStaff = JSON.parse(sessionStorage.getItem('staff_session')) || null;
+    let pollInterval = null;
+
+    function initPortal() {
+      if (!currentStaff) {
+        document.getElementById('staff-login-view').classList.remove('hidden');
+        document.getElementById('chef-dashboard-view').classList.add('hidden');
+        document.getElementById('waiter-dashboard-view').classList.add('hidden');
+        document.getElementById('staff-profile-badge').classList.add('hidden');
+        if (pollInterval) clearInterval(pollInterval);
+        return;
+      }
+
+      document.getElementById('staff-login-view').classList.add('hidden');
+      document.getElementById('staff-profile-badge').classList.remove('hidden');
+      document.getElementById('staff-profile-badge').classList.add('flex');
+      
+      const roleBadge = document.getElementById('staff-badge-role');
+      roleBadge.textContent = `${currentStaff.role === 'chef' ? '👨‍🍳 CHEF' : '🤵 WAITER'}: ${currentStaff.name}`;
+
+      if (currentStaff.role === 'chef') {
+        document.getElementById('chef-dashboard-view').classList.remove('hidden');
+        document.getElementById('waiter-dashboard-view').classList.add('hidden');
+        loadChefOrders();
+        if (pollInterval) clearInterval(pollInterval);
+        pollInterval = setInterval(loadChefOrders, 3000);
+      } else if (currentStaff.role === 'waiter') {
+        document.getElementById('chef-dashboard-view').classList.add('hidden');
+        document.getElementById('waiter-dashboard-view').classList.remove('hidden');
+        loadWaiterOrders();
+        if (pollInterval) clearInterval(pollInterval);
+        pollInterval = setInterval(loadWaiterOrders, 3000);
+      }
+    }
+
+    async function handleStaffLogin() {
+      const username = document.getElementById('login-username').value.trim();
+      const password = document.getElementById('login-password').value.trim();
+      const errBox = document.getElementById('login-error');
+
+      if (!username || !password) {
+        errBox.textContent = 'Please enter both username and password.';
+        errBox.classList.remove('hidden');
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+        if (data.success) {
+          sessionStorage.setItem('staff_session', JSON.stringify({
+            token: data.token,
+            role: data.role,
+            name: data.name
+          }));
+          currentStaff = JSON.parse(sessionStorage.getItem('staff_session'));
+          errBox.classList.add('hidden');
+          initPortal();
+        } else {
+          errBox.textContent = data.message || 'Login failed.';
+          errBox.classList.remove('hidden');
+        }
+      } catch (err) {
+        errBox.textContent = 'Network error connecting to backend on port 5000.';
+        errBox.classList.remove('hidden');
+      }
+    }
+
+    function quickLogin(user, pass) {
+      document.getElementById('login-username').value = user;
+      document.getElementById('login-password').value = pass;
+      handleStaffLogin();
+    }
+
+    function staffLogout() {
+      sessionStorage.removeItem('staff_session');
+      currentStaff = null;
+      initPortal();
+    }
+
+    // ==========================================
+    // CHEF OPERATIONS
+    // ==========================================
+    async function loadChefOrders() {
+      if (!currentStaff || currentStaff.role !== 'chef') return;
+
+      try {
+        const res = await fetch(`${API_BASE}/chef/orders`, {
+          headers: {
+            'Authorization': `Bearer ${currentStaff.token}`
+          }
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          renderChefOrders(data.orders);
+        } else if (res.status === 403 || res.status === 401) {
+          staffLogout();
+        }
+      } catch (err) {
+        console.error('Error fetching chef orders:', err);
+      }
+    }
+
+    function renderChefOrders(orders) {
+      const container = document.getElementById('chef-orders-container');
+      if (!orders || orders.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full bg-slate-950 p-12 rounded-2xl text-center border border-slate-800">
+            <div class="text-4xl mb-3">🍳</div>
+            <h4 class="text-lg font-bold text-slate-300">Kitchen Queue is Empty</h4>
+            <p class="text-xs text-slate-500 mt-1">Waiting for customers to place orders from tables...</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = orders.map(order => {
+        const isPending = order.status === 'pending';
+        const isPreparing = order.status === 'preparing';
+        const isReady = order.status === 'ready_for_pickup';
+
+        return `
+          <div class="bg-slate-950 rounded-2xl border ${isPending ? 'border-amber-500/60 shadow-amber-500/10' : isPreparing ? 'border-orange-500/60 shadow-orange-500/10' : 'border-emerald-500/40'} p-5 flex flex-col justify-between shadow-xl">
+            <div>
+              <!-- Table Number & Status Header -->
+              <div class="flex justify-between items-start mb-3 pb-3 border-b border-slate-800">
+                <div>
+                  <span class="text-xs font-semibold text-slate-400">Destination</span>
+                  <div class="text-2xl font-black text-amber-300 flex items-center gap-1.5">
+                    <span>🍽️</span> Table ${order.tableNumber}
+                  </div>
+                </div>
+                <div class="text-right">
+                  <span class="text-[10px] text-slate-500 block">Order ID</span>
+                  <span class="text-xs font-mono text-slate-300">#${order.orderId.replace('ORD-', '')}</span>
+                  <div class="mt-1">
+                    <span class="text-[11px] font-bold px-2 py-0.5 rounded-full uppercase ${
+                      isPending ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' :
+                      isPreparing ? 'bg-orange-500/20 text-orange-300 border border-orange-500/40 animate-pulse' :
+                      'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                    }">
+                      ${isPending ? 'Pending Acceptance' : isPreparing ? 'Cooking' : 'Handed to Waiter'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Order Items List (Table items only, no personal details) -->
+              <div class="space-y-2 mb-4">
+                <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Order Items:</p>
+                <div class="bg-slate-900/80 rounded-xl p-3 space-y-1.5 border border-slate-800">
+                  ${order.items.map(item => `
+                    <div class="flex justify-between items-center text-sm">
+                      <span class="text-slate-200"><strong class="text-amber-400">${item.quantity}x</strong> ${item.name}</span>
+                      <span class="text-xs text-slate-400">⏱️ ${item.prepTime}s</span>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+
+              <div class="text-xs text-slate-400 mb-4 flex justify-between items-center bg-slate-900 px-3 py-2 rounded-lg">
+                <span>Total Prep Time:</span>
+                <span class="font-bold text-amber-300">⏱️ ${order.totalPrepTime} seconds</span>
+              </div>
+            </div>
+
+            <!-- Chef Action Buttons -->
+            <div>
+              ${isPending ? `
+                <button onclick="chefAcceptOrder('${order.orderId}')" class="w-full bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold py-2.5 rounded-xl transition shadow text-sm flex items-center justify-center gap-2">
+                  <span>👨‍🍳</span> Accept Order (Start Cooking)
+                </button>
+              ` : isPreparing ? `
+                <button onclick="chefMarkReady('${order.orderId}')" class="w-full bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-2.5 rounded-xl transition shadow text-sm flex items-center justify-center gap-2">
+                  <span>✅</span> Ready & Handover to Waiter
+                </button>
+              ` : `
+                <div class="text-center text-xs text-emerald-400 bg-emerald-950/40 py-2 rounded-xl border border-emerald-900 flex items-center justify-center gap-1.5 font-medium">
+                  <span>🤵</span> Handed to Waiter for delivery to Table ${order.tableNumber}
+                </div>
+              `}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function chefAcceptOrder(orderId) {
+      try {
+        const res = await fetch(`${API_BASE}/chef/orders/${orderId}/accept`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${currentStaff.token}`
+          }
+        });
+        const data = await res.json();
+        if (data.success) {
+          loadChefOrders();
+        } else {
+          alert(data.message);
+        }
+      } catch (err) {
+        alert('Failed to accept order.');
+      }
+    }
+
+    async function chefMarkReady(orderId) {
+      try {
+        const res = await fetch(`${API_BASE}/chef/orders/${orderId}/ready`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${currentStaff.token}`
+          }
+        });
+        const data = await res.json();
+        if (data.success) {
+          loadChefOrders();
+        } else {
+          alert(data.message);
+        }
+      } catch (err) {
+        alert('Failed to mark order as ready.');
+      }
+    }
+
+    // ==========================================
+    // WAITER OPERATIONS
+    // ==========================================
+    async function loadWaiterOrders() {
+      if (!currentStaff || currentStaff.role !== 'waiter') return;
+
+      try {
+        const res = await fetch(`${API_BASE}/waiter/orders`, {
+          headers: {
+            'Authorization': `Bearer ${currentStaff.token}`
+          }
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          renderWaiterOrders(data.orders);
+        } else if (res.status === 403 || res.status === 401) {
+          staffLogout();
+        }
+      } catch (err) {
+        console.error('Error fetching waiter orders:', err);
+      }
+    }
+
+    function renderWaiterOrders(orders) {
+      const readyOrders = orders.filter(o => o.status === 'ready_for_pickup');
+      const otherOrders = orders.filter(o => o.status !== 'ready_for_pickup');
+
+      document.getElementById('waiter-ready-count').textContent = readyOrders.length;
+
+      const readyContainer = document.getElementById('waiter-ready-container');
+      if (readyOrders.length === 0) {
+        readyContainer.innerHTML = `
+          <div class="col-span-full bg-slate-950 p-8 rounded-2xl text-center border border-slate-800">
+            <div class="text-3xl mb-2">🍽️</div>
+            <h4 class="text-sm font-bold text-slate-300">No Orders Waiting for Delivery</h4>
+            <p class="text-xs text-slate-500">When the Chef marks an order as ready, it will appear here immediately for table delivery.</p>
+          </div>
+        `;
+      } else {
+        readyContainer.innerHTML = readyOrders.map(order => `
+          <div class="bg-emerald-950/30 rounded-2xl border-2 border-emerald-500 shadow-xl shadow-emerald-950 p-5 flex flex-col justify-between">
+            <div>
+              <div class="flex justify-between items-start mb-3 pb-3 border-b border-emerald-900/60">
+                <div>
+                  <span class="text-xs font-bold text-emerald-400 uppercase tracking-wider">DELIVER TO:</span>
+                  <div class="text-3xl font-black text-amber-300 flex items-center gap-2">
+                    <span>📍</span> TABLE ${order.tableNumber}
+                  </div>
+                </div>
+                <div class="text-right">
+                  <span class="text-[10px] text-slate-400 block">Order</span>
+                  <span class="text-xs font-mono text-slate-200">#${order.orderId.replace('ORD-', '')}</span>
+                  <span class="inline-block mt-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-500 text-slate-950">
+                    Ready for Pickup
+                  </span>
+                </div>
+              </div>
+
+              <!-- Items Summary -->
+              <div class="mb-5 bg-slate-900/90 rounded-xl p-3 border border-slate-800">
+                <p class="text-[11px] font-bold uppercase text-slate-400 mb-1.5">Items to Serve:</p>
+                <div class="space-y-1">
+                  ${order.items.map(item => `
+                    <div class="flex justify-between text-xs">
+                      <span class="text-slate-200"><strong class="text-amber-400">${item.quantity}x</strong> ${item.name}</span>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            </div>
+
+            <!-- Waiter Action -->
+            <button onclick="waiterDeliverOrder('${order.orderId}', '${order.tableNumber}')" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold py-3 rounded-xl transition shadow-lg text-sm flex items-center justify-center gap-2">
+              <span>🚀</span> Delivered to Table ${order.tableNumber}
+            </button>
+          </div>
+        `).join('');
+      }
+
+      // History / Preparing orders
+      const historyContainer = document.getElementById('waiter-history-container');
+      if (otherOrders.length === 0) {
+        historyContainer.innerHTML = `<p class="col-span-full text-xs text-slate-500">No previous orders recorded.</p>`;
+      } else {
+        historyContainer.innerHTML = otherOrders.slice(0, 6).map(order => `
+          <div class="bg-slate-950 rounded-xl border border-slate-800 p-3.5 text-xs flex justify-between items-center">
+            <div>
+              <div class="font-bold text-slate-200 flex items-center gap-1">
+                <span>🍽️</span> Table ${order.tableNumber}
+              </div>
+              <div class="text-[11px] text-slate-500">Order #${order.orderId.replace('ORD-', '')}</div>
+            </div>
+            <div>
+              <span class="px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase ${
+                order.status === 'delivered' ? 'bg-slate-800 text-slate-400' : 'bg-orange-500/20 text-orange-300'
+              }">
+                ${order.status === 'delivered' ? '✓ Delivered' : 'In Kitchen'}
+              </span>
+            </div>
+          </div>
+        `).join('');
+      }
+    }
+
+    async function waiterDeliverOrder(orderId, tableNumber) {
+      if (!confirm(`Confirm order delivered to Table ${tableNumber}?`)) return;
+
+      try {
+        const res = await fetch(`${API_BASE}/waiter/orders/${orderId}/deliver`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${currentStaff.token}`
+          }
+        });
+        const data = await res.json();
+        if (data.success) {
+          loadWaiterOrders();
+        } else {
+          alert(data.message);
+        }
+      } catch (err) {
+        alert('Failed to update delivery status.');
+      }
+    }
+
+    // Initialize portal on load
+    window.addEventListener('DOMContentLoaded', initPortal);
+  </script>
+</body>
+</html>

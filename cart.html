@@ -13,10 +13,11 @@
     <div class="text-xl font-bold tracking-wider flex items-center gap-2">
       <span>☕</span> The Daily Grind Café
     </div>
-    <nav class="space-x-6 text-sm font-medium">
+    <nav class="space-x-6 text-sm font-medium flex items-center">
       <a href="index.html" class="hover:text-amber-300 transition">Home</a>
       <a href="menu.html" class="hover:text-amber-300 transition">Menu</a>
-      <a href="cart.html" class="underline underline-offset-4">Cart</a>
+      <a href="cart.html" class="underline underline-offset-4 font-semibold">Cart</a>
+      <a href="staff.html" class="bg-amber-800 hover:bg-amber-700 text-amber-100 text-xs px-3 py-1.5 rounded-lg transition border border-amber-700">Staff Portal 🔒</a>
     </nav>
   </header>
 
@@ -54,6 +55,35 @@
             <span>Total Prep Time:</span>
             <span id="summary-prep-time" class="font-bold">⏱️ 0s</span>
           </div>
+        </div>
+
+        <!-- Table Selection (Mandatory for Dining) -->
+        <div class="mb-5 bg-amber-50/70 p-3.5 rounded-xl border border-amber-200">
+          <label for="table-select" class="block text-xs font-bold text-amber-900 uppercase tracking-wide mb-1.5 flex items-center gap-1">
+            <span>🍽️</span> Select Your Table Number <span class="text-red-500">*</span>
+          </label>
+          <select id="table-select" class="w-full bg-white border border-amber-300 text-amber-900 text-sm rounded-lg p-2.5 focus:ring-amber-700 focus:border-amber-700 font-semibold">
+            <option value="">-- Choose Table Number --</option>
+            <option value="1">Table 1</option>
+            <option value="2">Table 2</option>
+            <option value="3">Table 3</option>
+            <option value="4">Table 4</option>
+            <option value="5">Table 5</option>
+            <option value="6">Table 6</option>
+            <option value="7">Table 7</option>
+            <option value="8">Table 8</option>
+            <option value="9">Table 9</option>
+            <option value="10">Table 10</option>
+            <option value="12">Table 12 (Balcony)</option>
+            <option value="15">Table 15 (Patio)</option>
+          </select>
+          <p class="text-[11px] text-amber-700/80 mt-1">Chef & Waiter will only see this table number for food preparation & delivery.</p>
+        </div>
+
+        <!-- Privacy Assurance Note -->
+        <div class="mb-5 text-[11px] text-emerald-800 bg-emerald-50 p-2.5 rounded-lg border border-emerald-200 flex items-start gap-1.5">
+          <span>🔒</span>
+          <span><strong>Privacy Protected:</strong> Your personal identity is never shared with kitchen or floor staff. They only see your order items and table number.</span>
         </div>
 
         <div class="mb-6">
@@ -180,27 +210,41 @@
         return;
       }
 
+      const tableSelect = document.getElementById('table-select');
+      const tableNumber = tableSelect.value;
+      if (!tableNumber) {
+        alert('Please select your Table Number so our Chef and Waiter know where to send your order!');
+        tableSelect.focus();
+        return;
+      }
+
       let subtotal = items.reduce((sum, i) => sum + (i.price * i.quantity), 0);
       let totalAmount = subtotal + (subtotal * 0.05);
 
       const btn = document.getElementById('checkout-btn');
-      btn.textContent = 'Processing Payment...';
+      btn.textContent = 'Processing Payment & Placing Order...';
       btn.disabled = true;
 
       try {
         const response = await fetch(`${API_BASE}/orders`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ items, totalAmount })
+          body: JSON.stringify({
+            items,
+            totalAmount,
+            tableNumber,
+            customerName: 'Customer at Table ' + tableNumber
+          })
         });
         const data = await response.json();
 
         if (data.success) {
-          // Set active order in localStorage with end timestamp
-          const endTime = Date.now() + (data.totalPrepTime * 1000);
+          // Set active order in localStorage with initial pending status
           setActiveOrder({
             orderId: data.orderId,
-            endTime,
+            tableNumber: data.tableNumber,
+            status: data.status || 'pending',
+            totalPrepTime: data.totalPrepTime,
             celebrated: false
           });
 
@@ -208,7 +252,7 @@
           localStorage.removeItem('cafe_cart');
           cart = {};
 
-          alert('Payment Successful! Order placed successfully.');
+          alert(`Order placed successfully for Table ${tableNumber}! Kitchen Chef is receiving your order now.`);
           window.location.href = 'menu.html';
         } else {
           alert('Failed to place order: ' + data.message);
@@ -217,7 +261,7 @@
         }
       } catch (err) {
         console.error('Checkout error:', err);
-        alert('Network error connecting to backend. Please make sure cafe-be is running.');
+        alert('Network error connecting to backend on port 5000. Please ensure cafe-be is running.');
         btn.textContent = 'Pay & Place Order';
         btn.disabled = false;
       }
