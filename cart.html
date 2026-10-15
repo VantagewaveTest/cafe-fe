@@ -65,6 +65,7 @@
         </div>
 
         <button id="checkout-btn" onclick="placeOrder()" class="w-full bg-amber-800 hover:bg-amber-900 disabled:opacity-40 text-white py-3.5 rounded-xl font-semibold shadow-lg transition">Pay & Place Order</button>
+        <p id="checkout-status" class="text-sm text-center text-amber-800 hidden font-medium"></p>
         <button id="preview-btn" onclick="previewBill()" class="w-full bg-amber-100 hover:bg-amber-200 text-amber-900 py-2 rounded-xl font-medium border border-amber-300">Preview Bill (CGST/SGST)</button>
         <p class="text-xs text-amber-600 text-center">Payment is simulated; no real charge.</p>
       </div>
@@ -216,7 +217,7 @@
 
     async function placeOrder() {
       const items = Object.values(cart);
-      if (items.length === 0) { alert('Your cart is empty.'); return; }
+      if (items.length === 0) { const s=document.getElementById('checkout-status'); s.textContent='Your cart is empty.'; s.classList.remove('hidden'); return; }
       const body = collectPlaceOrderBody();
       const btn = document.getElementById('checkout-btn');
       btn.textContent = 'Processing Payment...'; btn.disabled = true;
@@ -238,16 +239,20 @@
           localStorage.setItem('active_cafe_order', JSON.stringify(active));
           localStorage.removeItem('cafe_cart');
           cart = {};
-          alert('Payment Successful! Total ' + (r.body.grandTotal).toFixed(2) + ' - ETA ' + r.body.totalPrepTime + 's.');
+          const checkoutStatus = document.getElementById('checkout-status');
+          checkoutStatus.textContent = 'Payment Successful! Total ' + (r.body.grandTotal).toFixed(2) + ' - ETA ' + r.body.totalPrepTime + 's.';
+          checkoutStatus.classList.remove('hidden');
           const uri = 'order-status.html?orderId=' + encodeURIComponent(r.body.orderId);
-          window.location.href = uri;
+          setTimeout(() => { window.location.href = uri; }, 1100);
         } else {
-          alert('Failed to place order: ' + (r.body?.message || 'unknown'));
+          const checkoutStatusErr = document.getElementById('checkout-status');
+          checkoutStatusErr.textContent = 'Payment failed: ' + (r.body?.message || 'unknown');
+          checkoutStatusErr.classList.remove('hidden');
           btn.textContent = 'Pay & Place Order'; btn.disabled = false;
         }
       } catch (e) {
         console.error(e);
-        alert('Network error - is cafe-be running?');
+        const ns=document.getElementById('checkout-status'); ns.textContent='Network error - is cafe-be running?'; ns.classList.remove('hidden');
         btn.textContent = 'Pay & Place Order'; btn.disabled = false;
       }
     }
