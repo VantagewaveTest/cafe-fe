@@ -67,7 +67,7 @@
         <button id="checkout-btn" onclick="placeOrder()" class="w-full bg-amber-800 hover:bg-amber-900 disabled:opacity-40 text-white py-3.5 rounded-xl font-semibold shadow-lg transition">Pay & Place Order</button>
         <p id="checkout-status" class="text-sm text-center text-amber-800 hidden font-medium"></p>
         <button id="preview-btn" onclick="previewBill()" class="w-full bg-amber-100 hover:bg-amber-200 text-amber-900 py-2 rounded-xl font-medium border border-amber-300">Preview Bill (CGST/SGST)</button>
-        <p class="text-xs text-amber-600 text-center">Payment is simulated; no real charge.</p>
+        <p class="text-xs text-amber-600 text-center">Payment is simulated; no real charge. &middot; <a href="chef.html" class="underline text-amber-600 hover:text-amber-800">Chef Access</a></p>
       </div>
     </div>
   </main>
@@ -150,6 +150,11 @@
     }
 
     function calculateSummary() {
+      const items = Object.values(cart);
+      if (!items.length) {
+        setSummary(0, 0, 0, 0, 0, 0, 0);
+        return { subtotal: 0, cgst: 0, sgst: 0, tax: 0, tipAmount: 0, total: 0, totalPrep: 0 };
+      }
       let subtotal = 0, totalPrep = 0;
       Object.values(cart).forEach(item => {
         subtotal += item.price * item.quantity;
