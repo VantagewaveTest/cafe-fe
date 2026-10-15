@@ -203,7 +203,7 @@ function updateTableMap(orders) {
             <span class="text-xs font-bold px-2 py-1 rounded-full text-white ${statusColor(o.status)}">${o.status}</span>
           </div>
           <div class="text-sm text-amber-800">${o.items.map(i => i.quantity + '  - ' + i.name).join(', ')}</div>
-          <div class="text-xs text-amber-600">Total Rs ${o.totalAmount.toFixed(2)} - Prep ${o.totalPrepTime}s - ETA ${o.expectedDeliveredAt ? formatTime(o.expectedDeliveredAt) : '--'}</div>
+          <div class="text-xs text-amber-600">Prep ${o.totalPrepTime}s - ETA ${o.expectedDeliveredAt ? formatTime(o.expectedDeliveredAt) : '--'}</div>
           <div class="flex flex-wrap gap-2">
             ${o.status === 'placed' ? actionBtn(o, 'Reject', 'reject', 'bg-red-700 hover:bg-red-800') : ''}
             ${o.status === 'placed' ? actionBtn(o, 'Start Prep', 'preparing', 'bg-violet-600 hover:bg-violet-700') : ''}
