@@ -1,0 +1,10 @@
+/* shared micro helpers */
+body { font-family: Inter, system-ui, sans-serif; }
+.circle-ring { transition: stroke-dasharray 160ms linear; }
+.btn { @apply px-4 py-2 rounded-xl font-medium transition; }
+.btn-primary { @apply bg-amber-800 text-white hover:bg-amber-900; }
+.input { @apply w-full border border-amber-300 rounded-lg px-3 py-2 text-sm; }
+.card { @apply bg-white rounded-2xl p-6 shadow-md border border-amber-200; }
+.fade-in { animation: fadein 280ms ease forwards; }
+@keyframes fadein { from { opacity:0; transform: translateY(4px); } to { opacity:1; transform:none; } }
+@media print { .no-print { display:none !important; } }

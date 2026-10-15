@@ -1,80 +1,104 @@
-// Shared Client Script for Timer & Confetti
-const API_BASE = 'http://localhost:5001/api';
+const API_BASE = (window.CAFE_CONFIG || {}).API_BASE || (window.API_BASE || 'http://localhost:5000/api');
+window.API_BASE = API_BASE;
 
-// Inject confetti CDN dynamically if not present
-if (!window.confetti) {
-  const script = document.createElement('script');
-  script.src = 'https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js';
-  document.head.appendChild(script);
-}
-
-function getActiveOrder() {
-  const data = localStorage.getItem('active_cafe_order');
-  return data ? JSON.parse(data) : null;
-}
-
-function setActiveOrder(order) {
-  localStorage.setItem('active_cafe_order', JSON.stringify(order));
-}
-
-function clearActiveOrder() {
-  localStorage.removeItem('active_cafe_order');
-}
-
-// Render floating timer bar if active order exists
-function initFloatingTimer() {
-  let timerBar = document.getElementById('floating-timer-bar');
-  if (!timerBar) {
-    timerBar = document.createElement('div');
-    timerBar.id = 'floating-timer-bar';
-    timerBar.className = 'fixed top-0 left-0 right-0 bg-amber-900 text-amber-100 px-4 py-2 text-center text-sm font-medium shadow-md z-50 flex items-center justify-center gap-4 transition-all duration-300';
-    document.body.prepend(timerBar);
-  }
-
-  const order = getActiveOrder();
-  if (!order) {
-    timerBar.style.display = 'none';
-    return;
-  }
-
-  const now = Date.now();
-  const remainingMs = order.endTime - now;
-
-  if (remainingMs <= 0) {
-    timerBar.style.display = 'flex';
-    timerBar.className = 'fixed top-0 left-0 right-0 bg-emerald-700 text-white px-4 py-3 text-center text-base font-bold shadow-lg z-50 flex items-center justify-center gap-3 animate-pulse';
-    timerBar.innerHTML = `
-      <span>🎉 Order #${order.orderId} is Ready! Please pick up at the counter.</span>
-      <button onclick="dismissOrder()" class="bg-white/20 hover:bg-white/30 text-xs px-2.5 py-1 rounded transition">Dismiss</button>
+(function () {
+  // ---- Circular timer ----
+  let timerWidget = null;
+  let ring = null;
+  let text = null;
+  function ensureTimer() {
+    if (timerWidget) return timerWidget;
+    timerWidget = document.createElement('div');
+    timerWidget.id = 'circle-timer';
+    timerWidget.className = 'fixed right-4 top-20 z-50 pointer-events-none opacity-0 scale-90 transition';
+    timerWidget.innerHTML = `
+      <div class="relative w-14 h-14 rounded-full bg-amber-100 shadow-lg border border-amber-300 flex items-center justify-center">
+        <svg class="absolute inset-0 -rotate-90" viewBox="0 0 56 56" aria-hidden="true">
+          <circle cx="28" cy="28" r="24" fill="none" stroke="#fde68a" stroke-width="6"></circle>
+          <circle id="circle-timer-ring" cx="28" cy="28" r="24" fill="none" stroke="#7c2d12" stroke-width="6" stroke-dasharray="0 1000" stroke-linecap="round"></circle>
+        </svg>
+        <span id="circle-timer-text" class="relative text-[11px] font-bold text-amber-900">--</span>
+      </div>
     `;
-    
-    // Trigger confetti once upon completion
-    if (!order.celebrated && window.confetti) {
-      window.confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
-      order.celebrated = true;
-      setActiveOrder(order);
-    }
-    return;
+    document.body.appendChild(timerWidget);
+    ring = document.getElementById('circle-timer-ring');
+    text = document.getElementById('circle-timer-text');
+    return timerWidget;
   }
 
-  timerBar.style.display = 'flex';
-  const remainingSec = Math.ceil(remainingMs / 1000);
-  const minutes = Math.floor(remainingSec / 60);
-  const seconds = remainingSec % 60;
-  const timeStr = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  let celebrated = false;
+  window.initCircleTimer = function () {
+    const el = ensureTimer();
+    const raw = localStorage.getItem('active_cafe_order');
+    const order = raw ? JSON.parse(raw) : null;
+    if (!order) {
+      el.classList.add('opacity-0', 'scale-90', 'pointer-events-none');
+      el.classList.remove('opacity-100', 'scale-100');
+      return;
+    }
 
-  timerBar.innerHTML = `
-    <span>⏳ Active Order #${order.orderId} Prep Time Remaining: <strong>${timeStr}</strong></span>
-    <a href="cart.html" class="underline text-amber-200 hover:text-white text-xs">View Details</a>
-  `;
-}
+    el.classList.remove('opacity-0', 'scale-90', 'pointer-events-none');
+    el.classList.add('opacity-100', 'scale-100');
 
-function dismissOrder() {
-  clearActiveOrder();
-  initFloatingTimer();
-  window.location.reload();
-}
+    const now = Date.now();
+    const remainingMs = Math.max(0, (order.endTime || Date.now()) - now);
+    const totalMs = Math.max(1, order.totalMs || (remainingMs + now - (order.startTime || now)));
+    const fraction = clamp((totalMs - remainingMs) / totalMs, 0, 1);
 
-// Run timer every second
-setInterval(initFloatingTimer, 1000);
-window.addEventListener('DOMContentLoaded', initFloatingTimer);
+    // circumference = 2π*24 ≈ 150.8
+    const circumference = 150.8;
+    ring.setAttribute('stroke-dasharray', `${fraction * circumference} ${circumference}`);
+    text.textContent = formatTime(remainingMs);
+
+    if (remainingMs <= 0 && !celebrated && order.canCelebrate) {
+      celebrated = true;
+      triggerConfetti('circle');
+      localStorage.setItem('active_cafe_order', JSON.stringify(Object.assign({}, order, { celebrated: true })));
+    }
+  };
+
+  function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
+  function formatTime(ms) {
+    const sec = Math.max(0, Math.ceil(ms / 1000));
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  }
+  function triggerConfetti() {
+    if (window.confetti) {
+      window.confetti({ particleCount: 100, spread: 80, origin: { y: 0.6 } });
+    } else {
+      const sc = document.createElement('script');
+      sc.src = 'https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js';
+      sc.onload = () => triggerConfetti();
+      document.head.appendChild(sc);
+    }
+  }
+
+  function clearActiveOrder() {
+    localStorage.removeItem('active_cafe_order');
+    celebrated = false;
+    initCircleTimer();
+    window.location.reload();
+  }
+  window.clearCafeOrder = clearActiveOrder;
+
+  // poll timer every second
+  setInterval(window.initCircleTimer, 1000);
+  window.addEventListener('DOMContentLoaded', () => {
+    if (!window.confetti) {
+      const sc = document.createElement('script');
+      sc.src = 'https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js';
+      document.head.appendChild(sc);
+    }
+    window.initCircleTimer();
+  });
+
+  // ---- helpers used by pages ----
+  window.getActiveOrder = () => {
+    const d = localStorage.getItem('active_cafe_order');
+    return d ? (JSON.parse(d) || {}) : null;
+  };
+  window.setActiveOrder = (order) => localStorage.setItem('active_cafe_order', JSON.stringify(order));
+  window.clearActiveOrder = () => localStorage.removeItem('active_cafe_order');
+})();

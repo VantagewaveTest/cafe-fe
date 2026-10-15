@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Daily Grind CafAc - Order Tracker</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-amber-50 min-h-screen flex flex-col font-sans">
+  <header class="bg-amber-900 text-amber-100 shadow-md py-4 px-6 flex justify-between items-center fixed top-0 left-0 right-0 z-40">
+    <div class="text-xl font-bold tracking-wider flex items-center gap-2"><span>☕</span> The Daily Grind CafAc</div>
+    <nav class="space-x-6 text-sm font-medium">
+      <a href="index.html" class="hover:text-amber-300 transition">Home</a>
+      <a href="menu.html" class="hover:text-amber-300 transition">Menu</a>
+      <a href="cart.html" class="hover:text-amber-300 transition">Cart</a>
+    </nav>
+  </header>
+
+  <main class="flex-grow max-w-2xl w-full mx-auto px-4 py-24">
+    <div id="status-card" class="bg-white rounded-2xl p-8 shadow-lg border border-amber-200 text-center space-y-6">
+      <h1 class="text-2xl font-bold text-amber-900">Order Tracker</h1>
+      <div id="status-pill" class="inline-flex px-5 py-2.5 rounded-full bg-amber-100 text-amber-900 font-bold text-sm">Preparing to load order…</div>
+      <div class="relative mx-auto w-36 h-36">
+        <svg viewBox="0 0 56 56" class="w-full h-full -rotate-90" aria-hidden="true">
+          <circle cx="28" cy="28" r="24" fill="none" stroke="#fde68a" stroke-width="6"></circle>
+          <circle id="tracker-ring" cx="28" cy="28" r="24" fill="none" stroke="#7c2d12" stroke-width="6" stroke-dasharray="0 150.8" stroke-linecap="round"></circle>
+        </svg>
+        <div class="absolute inset-0 flex items-center justify-center text-amber-900 font-bold text-lg" id="tracker-time">--:--</div>
+      </div>
+      <div id="status-details" class="text-amber-800 text-sm"></div>
+      <div class="flex flex-col sm:flex-row justify-center gap-3">
+        <button id="cancel-btn" class="bg-red-100 text-red-700 px-5 py-2 rounded-xl font-semibold disabled:opacity-40 hidden disabled:cursor-not-allowed">Cancel within 60 sec</button>
+        <a id="receipt-btn" class="bg-amber-800 hover:bg-amber-900 text-white px-5 py-2 rounded-xl font-semibold shadow inline-block" target="_blank" rel="noreferrer">Print receipt</a>
+      </div>
+      <div id="celebration" class="hidden text-amber-900 space-y-3">
+        <h2 class="text-3xl font-extrabold">🎉 Order at your table! 🎉</h2>
+        <p class="text-amber-700">Your order has been handed off. Thank you for dining with us.</p>
+        <button id="dismiss-celebration" class="bg-amber-800 hover:bg-amber-900 text-white px-6 py-2.5 rounded-xl font-semibold">Back to Menu</button>
+      </div>
+    </div>
+  </main>
+  <footer class="bg-amber-950 text-amber-300/60 py-4 text-center text-xs">&copy; 2026 The Daily Grind CafAc.</footer>
+  <script src="config.js"></script><script src="api.js"></script><script src="app.js"></script>
+  <script>
+    const CARD = document.getElementById('status-card');
+    const PILL = document.getElementById('status-pill');
+    const DETAILS = document.getElementById('status-details');
+    const TIME = document.getElementById('tracker-time');
+    const RING = document.getElementById('tracker-ring');
+    const CANCEL = document.getElementById('cancel-btn');
+    const RECEIPT = document.getElementById('receipt-btn');
+
+    function parseOrderQuery() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('orderId') || localStorage.getItem('active_cafe_order_id');
+    }
+
+    let ORDER = null;
+    let TIMER = null;
+    let cancelled = false;
+
+    function setPill(status) {
+      const map = { placed: 'Placed', preparing: 'Preparing', ready: 'Ready to Serve', delivered: 'Delivered', cancelled: 'Cancelled', rejected: 'Rejected' };
+      PILL.textContent = map[status] || status;
+    }
+
+    function updateRing(remainingMs, totalMs) {
+      const circumference = 150.8;
+      const ratio = totalMs > 0 ? Math.max(0, Math.min(1, 1 - (remainingMs / totalMs))) : 1;
+      RING.setAttribute('stroke-dasharray', (ratio * circumference) + ' ' + circumference);
+      const sec = Math.ceil(Math.max(0, remainingMs) / 1000);
+      const mm = String(Math.floor(sec / 60)).padStart(2, '0');
+      const ss = String(sec % 60).padStart(2, '0');
+      TIME.textContent = mm + ':' + ss;
+    }
+
+    async function pollOnce() {
+      if (!ORDER || !ORDER.orderId) return;
+      try {
+        const r = await CafeApi.get('/orders/' + ORDER.orderId);
+        if (!r.ok) {
+          throw new Error(r.body?.message || 'Network');
+        }
+        const data = r.body;
+        if (!data.success || !data.order) { throw new Error('Missing order'); }
+        const o = data.order;
+        setPill(o.status);
+        const remaining = Math.max(0, new Date(o.expectedDeliveredAt).getTime() - Date.now());
+        updateRing(remaining, (ORDER.totalMs || o.totalPrepTime * 1000) || remaining);
+        ORDER.status = o.status;
+        DETAILS.innerHTML = `
+          <div>Table: <strong>${o.tableNumber || '—'}</strong></div>
+          <p>${o.items.map(i => i.quantity + ' × ' + i.name).join(', ')}</p>
+        `;
+        RECEIPT.href = `${CafeApi.BASE}/orders/${o.orderId}/receipt`;
+        if (o.status === 'placed') {
+          CANCEL.classList.remove('hidden');
+        } else {
+          CANCEL.classList.add('hidden');
+        }
+        if (o.status === 'delivered' && !ORDER.completed) {
+          ORDER.completed = true;
+          document.getElementById('celebration').classList.remove('hidden');
+          if (window.confetti) window.confetti({ particleCount: 160, spread: 90, origin: { y: 0.5 } });
+          localStorage.removeItem('active_cafe_order');
+          window.clearCafeOrder && window.clearCafeOrder(true);
+          CANCEL.classList.add('hidden');
+          if (TIMER) clearInterval(TIMER);
+        } else if (cancelled) {
+          // terminated
+        }
+      } catch (e) {
+        DETAILS.textContent = 'Network error. Retrying…';
+      }
+    }
+
+    function startPolling(order) {
+      ORDER = order;
+      localStorage.setItem('active_cafe_order_id', order.orderId);
+      TIMER = setInterval(pollOnce, 3000);
+      pollOnce();
+    }
+
+    async function boot() {
+      const raw = localStorage.getItem('active_cafe_order');
+      const stored = raw ? JSON.parse(raw) : null;
+      const queryId = parseOrderQuery();
+      const id = queryId || (stored && stored.orderId);
+      if (!id) {
+        DETAILS.textContent = 'No active order found. Start from your cart after checkout.';
+        CANCEL.classList.add('hidden');
+        return;
+      }
+      startPolling({
+        orderId: id,
+        startTime: stored?.startTime || Date.now(),
+        endTime: stored?.endTime,
+        totalMs: stored?.totalMs,
+        celebrated: false,
+      });
+    }
+
+    CANCEL.addEventListener('click', async () => {
+      if (!ORDER) return;
+      CANCEL.disabled = true;
+      const r = await CafeApi.post('/orders/' + ORDER.orderId + '/cancel', {});
+      if (r.ok) {
+        cancelled = true;
+        PILL.textContent = 'Cancelled';
+        if (TIMER) clearInterval(TIMER);
+        CANCEL.classList.add('hidden');
+      } else {
+        alert(r.body?.message || 'Could not cancel at this stage');
+      }
+      CANCEL.disabled = false;
+      pollOnce();
+    });
+
+    document.getElementById('dismiss-celebration').addEventListener('click', () => {
+      window.location.href = 'menu.html';
+    });
+
+    window.addEventListener('DOMContentLoaded', boot);
+  </script>
+</body>
+</html>

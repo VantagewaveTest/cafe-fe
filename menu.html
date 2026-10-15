@@ -36,11 +36,14 @@
       <button onclick="filterCategory('Coffees')" class="category-btn px-4 py-2 rounded-xl text-sm font-medium bg-white text-amber-900 border border-amber-200 hover:bg-amber-100 transition">Coffees</button>
       <button onclick="filterCategory('Waffles')" class="category-btn px-4 py-2 rounded-xl text-sm font-medium bg-white text-amber-900 border border-amber-200 hover:bg-amber-100 transition">Waffles</button>
       <button onclick="filterCategory('Cakes')" class="category-btn px-4 py-2 rounded-xl text-sm font-medium bg-white text-amber-900 border border-amber-200 hover:bg-amber-100 transition">Cakes</button>
-      <button onclick="filterCategory('Biscuits')" class="category-btn px-4 py-2 rounded-xl text-sm font-medium bg-white text-amber-900 border border-amber-200 hover:bg-amber-100 transition">Biscuits</button>
+      <button onclick="filterCategory('Teas')" class="category-btn px-4 py-2 rounded-xl text-sm font-medium bg-white text-amber-900 border border-amber-200 hover:bg-amber-100 transition">Teas</button>
+      <button onclick="filterCategory('Sandwiches')" class="category-btn px-4 py-2 rounded-xl text-sm font-medium bg-white text-amber-900 border border-amber-200 hover:bg-amber-100 transition">Sandwiches</button>>
     </div>
 
-    <!-- Menu Grid -->
-    <div id="menu-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+    <div id="booking-banner" class="hidden flex items-center justify-between bg-amber-100 border border-amber-300 text-amber-900 px-4 py-3 rounded-xl mb-6">
+      <span id="booking-text" class="text-sm font-semibold"></span>
+      <a href="book.html" class="text-xs underline">Change booking</a>
+    </div>
       <!-- Loaded dynamically -->
     </div>
   </main>
@@ -62,7 +65,7 @@
     &copy; 2026 The Daily Grind Café. Freshly brewed with love.
   </footer>
 
-  <script src="app.js"></script>
+  <script src="config.js"></script><script src="api.js"></script><script src="app.js"></script>
   <script>
     let menuItems = [];
     let cart = JSON.parse(localStorage.getItem('cafe_cart')) || {};
@@ -183,7 +186,18 @@
       }
     }
 
-    window.addEventListener('DOMContentLoaded', fetchMenu);
+    const code = new URLSearchParams(window.location.search).get('code') || sessionStorage.getItem('booking_code');
+    if (code) {
+      CafeApi.get('/bookings/' + encodeURIComponent(code)).then(r => {
+        if (r.ok && r.body.success) {
+          const b = r.body.booking;
+          const bb = document.getElementById('booking-banner');
+          document.getElementById('booking-text').textContent = `Dining in ${b.guestName} • Table ${b.tableNumber} • ${b.partySize} pax`;
+          bb.classList.remove('hidden');
+        }
+      });
+    }
+    fetchMenu();
   </script>
 </body>
 </html>
