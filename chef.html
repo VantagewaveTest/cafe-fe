@@ -9,21 +9,23 @@
 </head>
 <body class="bg-amber-50 text-amber-900 min-h-screen font-sans">
   <header class="bg-amber-900 text-amber-100 border-b border-amber-900 py-4 px-6 flex justify-between items-center sticky top-0 z-30">
-    <div class="text-xl font-bold">Chef Dashboard</div>
+    <div class="flex items-center gap-3">
+      <a id="back-btn" href="index.html" class="text-sm text-amber-100 border border-amber-700 hover:bg-amber-800 px-3 py-1 rounded-lg">&larr; Back</a>
+      <div class="text-xl font-bold">Chef Dashboard</div>
+    </div>
     <div class="flex items-center gap-4">
       <span id="user-badge" class="text-xs text-amber-200"></span>
-      <button id="bell" class="relative bg-amber-600 px-3 py-1 rounded-lg" type="button">     <span id="pending-badge" class="ml-1 inline-block bg-amber-100 text-amber-900 text-xs px-2 py-0.5 rounded-full">0</span></button>
-      <button id="logout" class="text-sm text-amber-700 border border-amber-200 px-3 py-1 rounded-lg">Logout</button>
+      <button id="bell" class="relative bg-amber-600 px-3 py-1 rounded-lg hidden" type="button">     <span id="pending-badge" class="ml-1 inline-block bg-amber-100 text-amber-900 text-xs px-2 py-0.5 rounded-full">0</span></button>
+      <button id="logout" class="text-sm text-amber-100 border border-amber-200 px-3 py-1 rounded-lg hover:bg-amber-800 hidden" type="button">Logout</button>
     </div>
   </header>
 
   <main class="max-w-6xl mx-auto w-full px-4 py-6 space-y-6">
     <section id="login-panel" class="max-w-md mx-auto bg-white border border-amber-200 rounded-2xl p-6 text-center space-y-4">
       <h1 class="text-2xl font-bold">Chef Login</h1>
-      <input id="username" class="input w-full px-4 py-2.5 rounded-xl border border-amber-300 bg-amber-50 text-amber-900 placeholder:text-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-500 transition" placeholder="Username (default chef)" />
-      <input id="password" class="input w-full px-4 py-2.5 rounded-xl border border-amber-300 bg-amber-50 text-amber-900 placeholder:text-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-500 transition" type="password" placeholder="Password (default chef123)" />
+      <input id="username" class="input w-full px-4 py-2.5 rounded-xl border border-amber-300 bg-amber-50 text-amber-900 placeholder:text-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-500 transition" placeholder="Username" autocomplete="username" />
+      <input id="password" class="input w-full px-4 py-2.5 rounded-xl border border-amber-300 bg-amber-50 text-amber-900 placeholder:text-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-500 transition" type="password" placeholder="Password" autocomplete="current-password" />
       <button id="login-btn" class="bg-amber-700 hover:bg-amber-800 text-white w-full py-2 rounded-xl font-semibold" type="button">Sign In</button>
-      <p class="text-xs text-amber-600">Default: <code>chef / chef123</code></p>
       <p id="login-error" class="text-red-400 text-sm hidden"></p>
     </section>
 
@@ -264,13 +266,13 @@ async function advance(orderId, status) {
         });
         const j = await r.json().catch(() => ({}));
         if (!r.ok) {
-          err.textContent = j.message || 'Login failed - use chef / chef123';
+          err.textContent = j.message || 'Login failed - check your username and password.';
           err.classList.remove('hidden');
           return;
         }
         if (!j.token) { throw new Error('No token returned by server'); }
         sessionStorage.setItem('chefToken', j.token);
-        sessionStorage.setItem('chefUser', u || 'chef');
+        sessionStorage.setItem('chefUser', j.username || u || 'chef');
         showDashboard();
       } catch (e) {
         err.textContent = (e && e.message) ? e.message : 'Network error - start cafe-be on port 5000 and retry';
@@ -282,17 +284,19 @@ async function advance(orderId, status) {
     });
     document.getElementById('username').addEventListener('keyup', e => { if (e.key === 'Enter') document.getElementById('login-btn').click(); });
     document.getElementById('password').addEventListener('keyup', e => { if (e.key === 'Enter') document.getElementById('login-btn').click(); });
-    document.getElementById('logout').addEventListener('click', () => { sessionStorage.clear(); window.location.reload(); });
+    document.getElementById('logout').addEventListener('click', () => logout());
 
     function showDashboard() {
       LoginPanel.classList.add('hidden');
       Dashboard.classList.remove('hidden');
       document.getElementById('user-badge').textContent = sessionStorage.getItem('chefUser') || 'chef';
+      document.getElementById('bell').classList.remove('hidden');
+      document.getElementById('logout').classList.remove('hidden');
       fetchAll();
+      if (Poller) clearInterval(Poller);
       Poller = setInterval(fetchAll, 3000);
-      document.addEventListener('visibilitychange', () => {
-        if (document.hidden) { if (Poller) clearInterval(Poller); } else { fetchAll(); Poller = setInterval(fetchAll, 3000); }
-      });
+      document.removeEventListener('visibilitychange', onVis);
+      document.addEventListener('visibilitychange', onVis);
     }
 
     if (token()) showDashboard();
@@ -319,10 +323,23 @@ async function advance(orderId, status) {
     });
     BellBtn.addEventListener('click', () => { BellBtn.classList.add('animate-pulse'); setTimeout(() => BellBtn.classList.remove('animate-pulse'), 500); });
 
+    function onVis() {
+      if (document.hidden) {
+        if (Poller) clearInterval(Poller);
+      } else {
+        fetchAll();
+        Poller = setInterval(fetchAll, 3000);
+      }
+    }
+
     function logout(silent = false) {
       sessionStorage.clear();
       if (Poller) clearInterval(Poller);
-      Dashboard.classList.add('hidden'); LoginPanel.classList.remove('hidden');
+      document.getElementById('user-badge').textContent = '';
+      document.getElementById('bell').classList.add('hidden');
+      document.getElementById('logout').classList.add('hidden');
+      Dashboard.classList.add('hidden');
+      LoginPanel.classList.remove('hidden');
     }
 
     function actionBtn(order, label, target, color) {
