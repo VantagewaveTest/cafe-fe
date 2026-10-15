@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>The Daily Grind Café - Menu</title>
+  <title>The Daily Grind Caf  - Menu</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-amber-50 min-h-screen flex flex-col justify-between font-sans pt-12">
@@ -11,7 +11,7 @@
   <!-- Header -->
   <header class="bg-amber-900 text-amber-100 shadow-md py-4 px-6 flex justify-between items-center fixed top-0 left-0 right-0 z-40">
     <div class="text-xl font-bold tracking-wider flex items-center gap-2">
-      <span>☕</span> The Daily Grind Café
+      <span></span> The Daily Grind Caf 
     </div>
     <nav class="space-x-6 text-sm font-medium">
       <a href="index.html" class="hover:text-amber-300 transition">Home</a>
@@ -44,6 +44,9 @@
       <span id="booking-text" class="text-sm font-semibold"></span>
       <a href="book.html" class="text-xs underline">Change booking</a>
     </div>
+
+    <!-- Menu Grid -->
+    <div id="menu-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-12">
       <!-- Loaded dynamically -->
     </div>
   </main>
@@ -52,17 +55,17 @@
   <div id="floating-cart-bar" class="fixed bottom-0 left-0 right-0 bg-amber-950 text-amber-100 py-4 px-6 shadow-2xl z-45 flex justify-between items-center max-w-4xl mx-auto md:rounded-t-2xl border-t border-amber-800" style="display: none;">
     <div>
       <span id="cart-count-summary" class="font-bold text-amber-300">0 items</span> selected 
-      <span class="mx-2">•</span> 
+      <span class="mx-2">-</span> 
       Subtotal: <strong id="cart-subtotal-summary" class="text-amber-200">$0.00</strong>
     </div>
     <a href="cart.html" class="bg-amber-600 hover:bg-amber-500 text-white px-6 py-2.5 rounded-xl font-semibold shadow transition flex items-center gap-2">
-      View Cart & Checkout ➔
+      View Cart & Checkout  
     </a>
   </div>
 
   <!-- Footer -->
   <footer class="bg-amber-950 text-amber-300/60 py-4 text-center text-xs">
-    &copy; 2026 The Daily Grind Café. Freshly brewed with love.
+    &copy; 2026 The Daily Grind Caf . Freshly brewed with love.
   </footer>
 
   <script src="config.js"></script><script src="api.js"></script><script src="app.js"></script>
@@ -115,7 +118,7 @@
             <div>
               <div class="flex items-center justify-between mb-3 text-xs text-amber-800 font-medium bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-100">
                 <span>Prep Time:</span>
-                <span class="font-bold">⏱️ ${item.prepTime}s</span>
+                <span class="font-bold">   ${item.prepTime}s</span>
               </div>
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2 border border-amber-200 rounded-lg overflow-hidden">
@@ -192,7 +195,7 @@
         if (r.ok && r.body.success) {
           const b = r.body.booking;
           const bb = document.getElementById('booking-banner');
-          document.getElementById('booking-text').textContent = `Dining in ${b.guestName} • Table ${b.tableNumber} • ${b.partySize} pax`;
+          document.getElementById('booking-text').textContent = `Dining in ${b.guestName} - Table ${b.tableNumber} - ${b.partySize} pax`;
           bb.classList.remove('hidden');
         }
       });

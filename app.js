@@ -1,6 +1,28 @@
 const API_BASE = (window.CAFE_CONFIG || {}).API_BASE || (window.API_BASE || 'http://localhost:5000/api');
 window.API_BASE = API_BASE;
 
+function readCelebratedSet() {
+  try {
+    const raw = JSON.parse(localStorage.getItem('celebration_seen') || '[]');
+    return Array.isArray(raw) ? raw : [];
+  } catch (_) {
+    return [];
+  }
+}
+function hasCelebrated(id) {
+  return !!id && readCelebratedSet().indexOf(id) !== -1;
+}
+function markCelebrated(id) {
+  if (!id) return;
+  const list = readCelebratedSet();
+  if (list.indexOf(id) === -1) {
+    list.push(id);
+    localStorage.setItem('celebration_seen', JSON.stringify(list));
+  }
+}
+window.hasCelebrated = hasCelebrated;
+window.markCelebrated = markCelebrated;
+
 (function () {
   // ---- Circular timer ----
   let timerWidget = null;
@@ -12,12 +34,12 @@ window.API_BASE = API_BASE;
     timerWidget.id = 'circle-timer';
     timerWidget.className = 'fixed right-4 top-20 z-50 pointer-events-none opacity-0 scale-90 transition';
     timerWidget.innerHTML = `
-      <div class="relative w-14 h-14 rounded-full bg-amber-100 shadow-lg border border-amber-300 flex items-center justify-center">
-        <svg class="absolute inset-0 -rotate-90" viewBox="0 0 56 56" aria-hidden="true">
-          <circle cx="28" cy="28" r="24" fill="none" stroke="#fde68a" stroke-width="6"></circle>
-          <circle id="circle-timer-ring" cx="28" cy="28" r="24" fill="none" stroke="#7c2d12" stroke-width="6" stroke-dasharray="0 1000" stroke-linecap="round"></circle>
+      <div class="relative w-16 h-16 rounded-full bg-amber-100 shadow-lg border border-amber-300 flex items-center justify-center">
+        <svg class="absolute inset-0 -rotate-90" viewBox="0 0 64 64" aria-hidden="true">
+          <circle cx="32" cy="32" r="28" fill="none" stroke="#fde68a" stroke-width="6"></circle>
+          <circle id="circle-timer-ring" cx="32" cy="32" r="28" fill="none" stroke="#7c2d12" stroke-width="6" stroke-dasharray="0 1000" stroke-linecap="round"></circle>
         </svg>
-        <span id="circle-timer-text" class="relative text-[11px] font-bold text-amber-900">--</span>
+        <span id="circle-timer-text" class="relative text-[13px] font-bold text-amber-900">--</span>
       </div>
     `;
     document.body.appendChild(timerWidget);
@@ -45,15 +67,14 @@ window.API_BASE = API_BASE;
     const totalMs = Math.max(1, order.totalMs || (remainingMs + now - (order.startTime || now)));
     const fraction = clamp((totalMs - remainingMs) / totalMs, 0, 1);
 
-    // circumference = 2π*24 ≈ 150.8
-    const circumference = 150.8;
+    // circumference = 2pi*24 ~ 150.8
+    const circumference = 175.9;
     ring.setAttribute('stroke-dasharray', `${fraction * circumference} ${circumference}`);
     text.textContent = formatTime(remainingMs);
 
-    if (remainingMs <= 0 && !celebrated && order.canCelebrate) {
-      celebrated = true;
-      triggerConfetti('circle');
-      localStorage.setItem('active_cafe_order', JSON.stringify(Object.assign({}, order, { celebrated: true })));
+    if (remainingMs <= 0) {
+      // Reset only timer display; celebration is handled by order-status page once per delivery and is not replayed here.
+      text.textContent = '00:00';
     }
   };
 

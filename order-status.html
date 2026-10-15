@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>The Daily Grind CafAc - Order Tracker</title>
+  <title>The Daily Grind Cafe - Order Tracker</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body class="bg-amber-50 min-h-screen flex flex-col font-sans">
   <header class="bg-amber-900 text-amber-100 shadow-md py-4 px-6 flex justify-between items-center fixed top-0 left-0 right-0 z-40">
-    <div class="text-xl font-bold tracking-wider flex items-center gap-2"><span>☕</span> The Daily Grind CafAc</div>
+    <div class="text-xl font-bold tracking-wider flex items-center gap-2"><span></span> The Daily Grind Cafe</div>
     <nav class="space-x-6 text-sm font-medium">
       <a href="index.html" class="hover:text-amber-300 transition">Home</a>
       <a href="menu.html" class="hover:text-amber-300 transition">Menu</a>
@@ -20,7 +20,7 @@
   <main class="flex-grow max-w-2xl w-full mx-auto px-4 py-24">
     <div id="status-card" class="bg-white rounded-2xl p-8 shadow-lg border border-amber-200 text-center space-y-6">
       <h1 class="text-2xl font-bold text-amber-900">Order Tracker</h1>
-      <div id="status-pill" class="inline-flex px-5 py-2.5 rounded-full bg-amber-100 text-amber-900 font-bold text-sm">Preparing to load order…</div>
+      <div id="status-pill" class="inline-flex px-5 py-2.5 rounded-full bg-amber-100 text-amber-900 font-bold text-sm">Preparing to load order...</div>
       <div class="relative mx-auto w-36 h-36">
         <svg viewBox="0 0 56 56" class="w-full h-full -rotate-90" aria-hidden="true">
           <circle cx="28" cy="28" r="24" fill="none" stroke="#fde68a" stroke-width="6"></circle>
@@ -34,13 +34,13 @@
         <a id="receipt-btn" class="bg-amber-800 hover:bg-amber-900 text-white px-5 py-2 rounded-xl font-semibold shadow inline-block" target="_blank" rel="noreferrer">Print receipt</a>
       </div>
       <div id="celebration" class="hidden text-amber-900 space-y-3">
-        <h2 class="text-3xl font-extrabold">🎉 Order at your table! 🎉</h2>
+        <h2 class="text-3xl font-extrabold">Order Delivered Order at your table! Order Delivered</h2>
         <p class="text-amber-700">Your order has been handed off. Thank you for dining with us.</p>
         <button id="dismiss-celebration" class="bg-amber-800 hover:bg-amber-900 text-white px-6 py-2.5 rounded-xl font-semibold">Back to Menu</button>
       </div>
     </div>
   </main>
-  <footer class="bg-amber-950 text-amber-300/60 py-4 text-center text-xs">&copy; 2026 The Daily Grind CafAc.</footer>
+  <footer class="bg-amber-950 text-amber-300/60 py-4 text-center text-xs">&copy; 2026 The Daily Grind Cafe.</footer>
   <script src="config.js"></script><script src="api.js"></script><script src="app.js"></script>
   <script>
     const CARD = document.getElementById('status-card');
@@ -90,8 +90,8 @@
         updateRing(remaining, (ORDER.totalMs || o.totalPrepTime * 1000) || remaining);
         ORDER.status = o.status;
         DETAILS.innerHTML = `
-          <div>Table: <strong>${o.tableNumber || '—'}</strong></div>
-          <p>${o.items.map(i => i.quantity + ' × ' + i.name).join(', ')}</p>
+          <div>Table: <strong>${o.tableNumber || '-'}</strong></div>
+          <p>${o.items.map(i => i.quantity + ' x ' + i.name).join(', ')}</p>
         `;
         RECEIPT.href = `${CafeApi.BASE}/orders/${o.orderId}/receipt`;
         if (o.status === 'placed') {
@@ -99,24 +99,35 @@
         } else {
           CANCEL.classList.add('hidden');
         }
-        if (o.status === 'delivered' && !ORDER.completed) {
-          ORDER.completed = true;
-          document.getElementById('celebration').classList.remove('hidden');
-          if (window.confetti) window.confetti({ particleCount: 160, spread: 90, origin: { y: 0.5 } });
+const timerFinished = remaining <= 0;
+
+        if (o.status === 'delivered' || timerFinished) {
+          if (!ORDER.completed) {
+            const ageGuard = !!(ORDER.startTime && (Date.now() - ORDER.startTime > 45 * 60 * 1000));
+            const alreadySeen = !!(window.hasCelebrated && window.hasCelebrated(ORDER.orderId));
+            if (!alreadySeen && !ageGuard) {
+              document.getElementById('celebration').classList.remove('hidden');
+              if (window.confetti) window.confetti({ particleCount: 160, spread: 90, origin: { y: 0.5 } });
+            }
+            if (window.markCelebrated) window.markCelebrated(ORDER.orderId);
+            ORDER.completed = true;
+            ORDER.celebrated = true;
+            localStorage.setItem('active_cafe_order', JSON.stringify(Object.assign({}, ORDER, { celebrated: true, completed: true })));
+          }
           localStorage.removeItem('active_cafe_order');
-          window.clearCafeOrder && window.clearCafeOrder(true);
           CANCEL.classList.add('hidden');
           if (TIMER) clearInterval(TIMER);
         } else if (cancelled) {
           // terminated
         }
       } catch (e) {
-        DETAILS.textContent = 'Network error. Retrying…';
+        DETAILS.textContent = 'Network error. Retrying...';
       }
     }
 
     function startPolling(order) {
       ORDER = order;
+      ORDER.completed = !!(order.completed || order.celebrated || (window.hasCelebrated && window.hasCelebrated(order.orderId)));
       localStorage.setItem('active_cafe_order_id', order.orderId);
       TIMER = setInterval(pollOnce, 3000);
       pollOnce();
@@ -124,7 +135,12 @@
 
     async function boot() {
       const raw = localStorage.getItem('active_cafe_order');
-      const stored = raw ? JSON.parse(raw) : null;
+      let stored = raw ? JSON.parse(raw) : null;
+      const activeAge = stored?.startTime ? Date.now() - stored.startTime : 0;
+      if (stored && activeAge > 45 * 60 * 1000) {
+        localStorage.removeItem('active_cafe_order');
+        stored = null;
+      }
       const queryId = parseOrderQuery();
       const id = queryId || (stored && stored.orderId);
       if (!id) {
@@ -137,7 +153,7 @@
         startTime: stored?.startTime || Date.now(),
         endTime: stored?.endTime,
         totalMs: stored?.totalMs,
-        celebrated: false,
+        celebrated: !!(stored?.celebrated || (window.hasCelebrated && window.hasCelebrated(id))),
       });
     }
 
