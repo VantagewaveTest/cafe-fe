@@ -193,7 +193,7 @@
         const b = r.body.bill;
         document.getElementById('summary-total').textContent = `$${b.grandTotal.toFixed(2)}`;
         previewBillData = b;
-        alert('Preview:\nSubtotal $' + b.subtotal.toFixed(2) + '\nCGST $' + b.cgst.toFixed(2) + '\nSGST $' + b.sgst.toFixed(2) + '\nTip $' + b.tipAmount.toFixed(2) + '\nTotal $' + b.grandTotal.toFixed(2));
+        silentAlert('Preview:\nSubtotal $' + b.subtotal.toFixed(2) + '\nCGST $' + b.cgst.toFixed(2) + '\nSGST $' + b.sgst.toFixed(2) + '\nTip $' + b.tipAmount.toFixed(2) + '\nTotal $' + b.grandTotal.toFixed(2));
       }
     }
 

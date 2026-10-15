@@ -64,8 +64,7 @@
     </section>
   </main>
 
-  <audio id="bell-audio" src="data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU..." type="audio/wav" preload="auto"></audio>
-  <script src="config.js"></script><script src="api.js"></script>
+    <script src="config.js"></script><script src="api.js"></script>
   <script>
     const LoginPanel = document.getElementById('login-panel');
     const Dashboard = document.getElementById('dashboard');
@@ -149,10 +148,10 @@ function maybeShowStockWarnings(inventory) {
 async function restockItem(id) {
   try {
     const res = await api('/chef/inventory/' + encodeURIComponent(id) + '/restock', { amount: 10 }, 'POST');
-    if (!res.ok) alert(res.body?.message || 'Restock failed');
+    if (!res.ok) silentAlert(res.body?.message || 'Restock failed');
     fetchAll();
   } catch (_) {
-    alert('Network error. Is cafe-be running?');
+    silentAlert('Network error. Is cafe-be running?');
   }
 }
 
@@ -237,15 +236,15 @@ function updateTableMap(orders) {
 
 async function advance(orderId, status) {
       const r = await api('/chef/orders/' + orderId + '/status', { status }, 'PATCH');
-      if (!r.ok) return alert(r.body?.message || 'Action failed');
+      if (!r.ok) { silentAlert(r.body?.message || 'Action failed'); return; }
       fetchAll();
     }
 
     async function reject(orderId) {
-      const reason = prompt('Rejection reason (required):');
+      const reason = await window.silentPrompt('Rejection reason (required):');
       if (!reason) return;
       const r = await api('/chef/orders/' + orderId + '/reject', { reason }, 'POST');
-      if (!r.ok) return alert(r.body?.message || 'Reject failed');
+      if (!r.ok) { silentAlert(r.body?.message || 'Reject failed'); return; }
       fetchAll();
     }
 
@@ -258,7 +257,6 @@ async function advance(orderId, status) {
       err.classList.add('hidden');
       btn.disabled = true;
       btn.textContent = 'Signing in...';
-      // Unlock browser audio permissions immediately in response to user gesture
             try {
         const r = await fetch(window.API_BASE + '/chef/login', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },

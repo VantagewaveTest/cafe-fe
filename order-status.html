@@ -167,7 +167,7 @@ const timerFinished = remaining <= 0;
         if (TIMER) clearInterval(TIMER);
         CANCEL.classList.add('hidden');
       } else {
-        alert(r.body?.message || 'Could not cancel at this stage');
+        silentAlert(r.body?.message || 'Could not cancel at this stage');
       }
       CANCEL.disabled = false;
       pollOnce();
