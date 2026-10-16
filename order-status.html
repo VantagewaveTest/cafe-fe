@@ -148,6 +148,17 @@
         return;
       }
 
+      // Ensure order access token is available in sessionStorage for API calls.
+      // Cart.html stores it in sessionStorage; fall back to localStorage if needed.
+      let orderToken = sessionStorage.getItem('orderAccessToken');
+      if (!orderToken) {
+        try {
+          const stored = JSON.parse(localStorage.getItem('active_cafe_order') || '{}');
+          orderToken = stored.orderAccessToken;
+          if (orderToken) sessionStorage.setItem('orderAccessToken', orderToken);
+        } catch (_) {}
+      }
+
       try {
         const res = await CafeApi.get(`/api/orders/${orderId}`);
 

@@ -257,13 +257,16 @@
             celebrated: false
           });
 
+          // Store order access token in sessionStorage for order-status.html API calls
+          sessionStorage.setItem('orderAccessToken', data.body.orderAccessToken);
+
           // Clear cart
           localStorage.removeItem('cafe_cart');
           cart = {};
 
-          status.textContent = `Order placed! Order #${data.body.orderId} — Payment simulated. Track your order below.`;
+          status.textContent = `✅ Payment simulated! Order #${data.body.orderId} placed. Track your order below.`;
           status.classList.remove('hidden');
-          status.classList.add('text-amber-700');
+          status.classList.add('text-green-600');
 
           // Show order confirmation and redirect to tracker
           btn.textContent = 'Go to Order Tracker';
