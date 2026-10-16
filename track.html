@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Daily Grind Café - Track Order</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-amber-50 min-h-screen flex flex-col justify-between font-sans pt-12">
+
+  <!-- Header -->
+  <header class="bg-amber-900 text-amber-100 shadow-md py-4 px-6 flex justify-between items-center fixed top-0 left-0 right-0 z-40">
+    <div class="text-xl font-bold tracking-wider flex items-center gap-2">
+      <span>☕</span> The Daily Grind Café
+    </div>
+    <nav class="space-x-6 text-sm font-medium">
+      <a href="index.html" class="hover:text-amber-300 transition">Home</a>
+      <a href="menu.html" class="hover:text-amber-300 transition">Menu</a>
+      <a href="cart.html" class="hover:text-amber-300 transition">Cart</a>
+      <a href="track.html" class="underline underline-offset-4">Track Order</a>
+      <a href="staff.html" class="hover:text-amber-300 transition">Staff</a>
+    </nav>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-grow max-w-2xl w-full mx-auto px-4 py-8 mb-12">
+    <h1 class="text-3xl font-bold text-amber-900 mb-6 text-center">Track Your Order</h1>
+
+    <!-- Order Input Section -->
+    <div id="order-input-section" class="bg-white rounded-2xl p-6 shadow-md border border-amber-200 mb-6">
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-amber-900 uppercase tracking-wide mb-1">Order ID</label>
+          <input type="text" id="track-order-id" placeholder="e.g. ORD-1699999999999-ABC123" class="w-full border border-amber-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-amber-900 uppercase tracking-wide mb-1">Tracking Token</label>
+          <input type="text" id="track-order-token" placeholder="Enter your tracking token" class="w-full border border-amber-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
+        </div>
+        <div id="track-error" class="text-red-600 text-sm hidden"></div>
+        <button onclick="trackOrder()" class="w-full bg-amber-800 hover:bg-amber-900 text-white py-3 rounded-xl font-semibold shadow-lg transition">
+          Track Order
+        </button>
+      </div>
+    </div>
+
+    <!-- Active Order (from localStorage) -->
+    <div id="active-order-section" class="hidden">
+      <div class="bg-white rounded-2xl p-6 shadow-md border border-amber-200 mb-6">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-lg font-bold text-amber-900">Your Active Order</h2>
+          <span id="active-order-status" class="px-3 py-1 rounded-full text-sm font-bold"></span>
+        </div>
+        <div id="active-order-details" class="space-y-3 text-sm text-amber-800"></div>
+      </div>
+
+      <!-- Status Progress Bar -->
+      <div class="bg-white rounded-2xl p-6 shadow-md border border-amber-200 mb-6">
+        <h3 class="text-sm font-bold text-amber-900 mb-4">Order Progress</h3>
+        <div id="status-progress" class="flex items-center justify-between">
+          <!-- Rendered dynamically -->
+        </div>
+        <div class="mt-4">
+          <div class="flex justify-between text-xs text-amber-600">
+            <span>Estimated prep time remaining:</span>
+            <span id="active-order-timer" class="font-bold">--:--</span>
+          </div>
+          <p class="text-xs text-amber-500 mt-1 italic">⏱️ Timer is an estimate only. Order status is updated by the kitchen.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tracked Order Result -->
+    <div id="tracked-order-section" class="hidden">
+      <div class="bg-white rounded-2xl p-6 shadow-md border border-amber-200 mb-6">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-lg font-bold text-amber-900">Order Details</h2>
+          <span id="tracked-order-status" class="px-3 py-1 rounded-full text-sm font-bold"></span>
+        </div>
+        <div id="tracked-order-details" class="space-y-3 text-sm text-amber-800"></div>
+      </div>
+
+      <!-- Status Progress Bar -->
+      <div class="bg-white rounded-2xl p-6 shadow-md border border-amber-200">
+        <h3 class="text-sm font-bold text-amber-900 mb-4">Order Progress</h3>
+        <div id="tracked-status-progress" class="flex items-center justify-between">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div id="empty-state" class="bg-white rounded-2xl p-8 shadow-md border border-amber-200 text-center">
+      <div class="text-5xl mb-3">📋</div>
+      <h3 class="text-xl font-bold text-amber-900 mb-2">No Order to Track</h3>
+      <p class="text-amber-700 text-sm mb-6">Place an order first, then come back to track it here.</p>
+      <a href="menu.html" class="bg-amber-800 hover:bg-amber-900 text-white px-6 py-3 rounded-xl font-medium inline-block shadow transition">Browse Menu</a>
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-amber-950 text-amber-300/60 py-4 text-center text-xs">
+    &copy; 2026 The Daily Grind Café. Freshly brewed with love.
+  </footer>
+
+  <script src="app.js"></script>
+  <script>
+    const STATUS_STEPS = ['PENDING', 'PREPARING', 'READY', 'PICKED_UP', 'SERVED'];
+    const STATUS_COLORS = {
+      PENDING: 'bg-yellow-100 text-yellow-800 border-yellow-300',
+      PREPARING: 'bg-blue-100 text-blue-800 border-blue-300',
+      READY: 'bg-green-100 text-green-800 border-green-300',
+      PICKED_UP: 'bg-purple-100 text-purple-800 border-purple-300',
+      SERVED: 'bg-gray-100 text-gray-800 border-gray-300'
+    };
+    const STATUS_ICONS = {
+      PENDING: '📝',
+      PREPARING: '👨‍🍳',
+      READY: '✅',
+      PICKED_UP: '🏃',
+      SERVED: '🎉'
+    };
+
+    let trackedPollInterval = null;
+
+    function renderStatusProgress(containerId, currentStatus) {
+      const container = document.getElementById(containerId);
+      const currentIdx = STATUS_STEPS.indexOf(currentStatus);
+      
+      container.innerHTML = STATUS_STEPS.map((status, idx) => {
+        const isCompleted = idx <= currentIdx;
+        const isCurrent = idx === currentIdx;
+        const colorClass = isCompleted ? STATUS_COLORS[status] : 'bg-gray-100 text-gray-400 border-gray-200';
+        const icon = STATUS_ICONS[status];
+        
+        return `
+          <div class="flex flex-col items-center flex-1">
+            <div class="w-10 h-10 rounded-full flex items-center justify-center text-lg border-2 ${colorClass} ${isCurrent ? 'ring-2 ring-amber-400 ring-offset-2' : ''}">
+              ${icon}
+            </div>
+            <span class="text-xs mt-1 font-medium ${isCompleted ? 'text-amber-900' : 'text-gray-400'}">${status}</span>
+          </div>
+          ${idx < STATUS_STEPS.length - 1 ? `<div class="flex-1 h-0.5 ${idx < currentIdx ? 'bg-amber-400' : 'bg-gray-200'} mx-1"></div>` : ''}
+        `;
+      }).join('');
+    }
+
+    function showActiveOrder() {
+      const order = getActiveOrder();
+      const activeSection = document.getElementById('active-order-section');
+      const emptyState = document.getElementById('empty-state');
+      const inputSection = document.getElementById('order-input-section');
+
+      if (!order) {
+        activeSection.classList.add('hidden');
+        emptyState.classList.remove('hidden');
+        inputSection.classList.remove('hidden');
+        return;
+      }
+
+      activeSection.classList.remove('hidden');
+      emptyState.classList.add('hidden');
+      inputSection.classList.add('hidden');
+
+      const statusEl = document.getElementById('active-order-status');
+      statusEl.textContent = order.backendStatus || 'PENDING';
+      statusEl.className = `px-3 py-1 rounded-full text-sm font-bold border ${STATUS_COLORS[order.backendStatus] || STATUS_COLORS.PENDING}`;
+
+      const detailsEl = document.getElementById('active-order-details');
+      detailsEl.innerHTML = `
+        <div class="flex justify-between"><span class="font-medium">Order ID:</span><span>${order.orderId}</span></div>
+        <div class="flex justify-between"><span class="font-medium">Status:</span><span>${order.backendStatus || 'PENDING'}</span></div>
+      `;
+
+      renderStatusProgress('status-progress', order.backendStatus || 'PENDING');
+    }
+
+    async function trackOrder() {
+      const orderId = document.getElementById('track-order-id').value.trim();
+      const token = document.getElementById('track-order-token').value.trim();
+      const errorDiv = document.getElementById('track-error');
+
+      if (!orderId || !token) {
+        errorDiv.textContent = 'Please enter both Order ID and Tracking Token.';
+        errorDiv.classList.remove('hidden');
+        return;
+      }
+
+      errorDiv.classList.add('hidden');
+
+      try {
+        const response = await fetch(`${API_BASE}/orders/${orderId}`, {
+          headers: { 'X-Order-Token': token }
+        });
+
+        if (response.status === 401 || response.status === 403) {
+          errorDiv.textContent = 'Invalid or missing tracking token.';
+          errorDiv.classList.remove('hidden');
+          return;
+        }
+        if (response.status === 404) {
+          errorDiv.textContent = 'Order not found.';
+          errorDiv.classList.remove('hidden');
+          return;
+        }
+
+        const data = await response.json();
+        if (data.success) {
+          showTrackedOrder(data.order);
+        } else {
+          errorDiv.textContent = data.message || 'Failed to track order.';
+          errorDiv.classList.remove('hidden');
+        }
+      } catch (err) {
+        errorDiv.textContent = 'Network error. Please make sure cafe-be is running on port 5000.';
+        errorDiv.classList.remove('hidden');
+      }
+    }
+
+    function showTrackedOrder(order) {
+      const trackedSection = document.getElementById('tracked-order-section');
+      const emptyState = document.getElementById('empty-state');
+      const inputSection = document.getElementById('order-input-section');
+
+      trackedSection.classList.remove('hidden');
+      emptyState.classList.add('hidden');
+      inputSection.classList.add('hidden');
+
+      const statusEl = document.getElementById('tracked-order-status');
+      statusEl.textContent = order.status;
+      statusEl.className = `px-3 py-1 rounded-full text-sm font-bold border ${STATUS_COLORS[order.status] || STATUS_COLORS.PENDING}`;
+
+      const detailsEl = document.getElementById('tracked-order-details');
+      const itemsList = order.items.map(i => `${i.quantity}x ${i.name}`).join(', ');
+      detailsEl.innerHTML = `
+        <div class="flex justify-between"><span class="font-medium">Order ID:</span><span>${order.orderId}</span></div>
+        <div class="flex justify-between"><span class="font-medium">Status:</span><span>${order.status}</span></div>
+        <div class="flex justify-between"><span class="font-medium">Items:</span><span>${itemsList}</span></div>
+        <div class="flex justify-between"><span class="font-medium">Total:</span><span>$${order.totalAmount.toFixed(2)}</span></div>
+        ${order.tableNumber ? `<div class="flex justify-between"><span class="font-medium">Table:</span><span>${order.tableNumber}</span></div>` : ''}
+      `;
+
+      renderStatusProgress('tracked-status-progress', order.status);
+
+      // Poll for updates
+      if (trackedPollInterval) clearInterval(trackedPollInterval);
+      trackedPollInterval = setInterval(async () => {
+        try {
+          const response = await fetch(`${API_BASE}/orders/${order.orderId}`, {
+            headers: { 'X-Order-Token': document.getElementById('track-order-token').value.trim() }
+          });
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+              showTrackedOrder(data.order);
+            }
+          }
+        } catch (err) {
+          // Silent fail on poll
+        }
+      }, 3000);
+    }
+
+    // Update timer display
+    function updateTimer() {
+      const order = getActiveOrder();
+      if (!order) return;
+
+      const now = Date.now();
+      const remainingMs = order.endTime - now;
+      const timerEl = document.getElementById('active-order-timer');
+
+      if (remainingMs <= 0) {
+        timerEl.textContent = 'Waiting for kitchen...';
+        timerEl.className = 'font-bold text-amber-600';
+      } else {
+        const remainingSec = Math.ceil(remainingMs / 1000);
+        const minutes = Math.floor(remainingSec / 60);
+        const seconds = remainingSec % 60;
+        timerEl.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        timerEl.className = 'font-bold text-amber-900';
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      showActiveOrder();
+      updateTimer();
+    });
+
+    setInterval(updateTimer, 1000);
+  </script>
+</body>
+</html>
