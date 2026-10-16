@@ -99,29 +99,18 @@
       const emptyState = document.getElementById('empty-state');
 
       if (!allOrders || allOrders.length === 0) {
-        container.classList.add('hidden');
         emptyState.classList.remove('hidden');
+        container.classList.add('hidden');
         return;
       }
 
-      container.classList.remove('hidden');
       emptyState.classList.add('hidden');
+      container.classList.remove('hidden');
 
       container.innerHTML = allOrders.map(order => renderOrderCard(order)).join('');
 
       // Start polling
       startPolling();
-    }
-
-    function getStatusIcon(status) {
-      switch(status) {
-        case 'PENDING': return '📝';
-        case 'PREPARING': return '👨‍🍳';
-        case 'READY': return '🍽️';
-        case 'PICKED_UP': return '🚚';
-        case 'SERVED': return '✅';
-        default: return '•';
-      }
     }
 
     function renderOrderCard(order) {
@@ -151,18 +140,17 @@
 
       return `
         <div class="bg-white rounded-2xl border-2 border-amber-200 shadow-lg p-6 transition-all duration-500 order-card" id="order-${order.orderId}">
-          <!-- Header -->
-          <div class="flex justify-between items-start mb-4">
-            <div class="flex flex-col gap-2">
-              <div class="flex items-center gap-2">
-                <div class="font-bold text-amber-900 text-lg">Order #${order.orderId}</div>
-                <span class="text-xs font-bold px-2 py-1 rounded-full ${badgeColorClass}">${STATUS_LABELS[status]}</div>
+          <!-- Status Header -->
+          <div class="flex justify-between items-start mb-6 pb-6 border-b border-amber-200">
+            <div>
+              <h2 class="text-2xl font-bold text-amber-900 mb-2">Order #${order.orderId}</div>
+              <div id="status-pill-${order.orderId}" class="inline-flex items-center gap-2 px-4 py-2 rounded-full font-bold text-sm shadow-sm">
+                <span class="w-2.5 h-2.5 rounded-full ${badgeColorClass(status)} animate-pulse"></span>
+                <span id="status-text-${order.orderId}" class="font-bold text-sm">${STATUS_LABELS[status] || status}</span>
               </div>
-              <div class="text-xs text-amber-600">Token: <span class="font-mono text-xs">${order.orderAccessToken ? order.orderAccessToken.substring(0, 12) + '...' : 'N/A'}</span></div>
             </div>
             <div class="text-right">
-              <div class="text-xs text-amber-600">Created:</div>
-              <div class="text-xs font-bold text-amber-900">${new Date(order.createdAt || order.endTime).toLocaleTimeString()}</div>
+              <div class="text-xs text-amber-500 font-mono">Token: <span class="text-amber-700 font-mono">${order.orderAccessToken ? order.orderAccessToken.substring(0, 12) + '...' : 'N/A'}</span></div>
             </div>
           </div>
 
@@ -170,18 +158,18 @@
           <div class="relative mx-auto max-w-md mb-6">
             <div class="tracking-line" style="position: relative;">
               ${timelineHtml}
-              <!-- Tracking Character -->
+              <!-- Animated Character -->
               <div id="tracking-char-${order.orderId}" class="tracking-char">🛵</div>
             </div>
           </div>
 
-          <!-- Items -->
-          <div class="bg-white rounded-xl p-6 border border-amber-200 mb-6">
+          <!-- Order Items -->
+          <div class="bg-white rounded-xl p-6 border border-amber-200">
             <h3 class="text-sm font-bold text-amber-700 uppercase tracking-wide mb-3">☕ Order Items</h3>
-            <div class="space-y-2">
+            <div id="order-items-${order.orderId}" class="space-y-2">
               ${(order.items || []).map(item => `
                 <div class="flex justify-between items-center py-2 border-b border-amber-50 last:border-0">
-                  <div class="flex items-center gap-3">
+                  <div class="flex flex-col">
                     <div class="text-sm font-bold text-amber-900">${getItemEmoji(i.name)} ${i.quantity}× ${i.name}</div>
                     <div class="text-xs text-amber-500">${i.category || ''}</div>
                   </div>
@@ -192,21 +180,21 @@
           </div>
 
           <!-- Table & Total -->
-          <div class="grid grid-cols-2 gap-4 mt-4">
+          <div class="grid grid-cols-2 gap-4 mt-6">
             <div class="bg-amber-50 rounded-xl p-4 border border-amber-100">
               <div class="text-xs font-bold text-amber-600 uppercase tracking-wide mb-1">🍽️ Table / Counter</div>
-              <div class="text-lg font-bold text-amber-900">${order.tableNumber || '-'}</div>
+              <div class="text-lg font-bold text-amber-900" id="display-table-${order.orderId}">${order.tableNumber || '-'}</div>
             </div>
             <div class="bg-amber-50 rounded-xl p-4 border border-amber-100">
               <div class="text-xs font-bold text-amber-600 uppercase tracking-wide mb-1">💰 Total Amount</div>
-              <div class="text-lg font-bold text-amber-900">$${order.totalAmount ? order.totalAmount.toFixed(2) : '-'}</div>
+              <div class="text-lg font-bold text-amber-900" id="display-total-${order.orderId}">$${order.totalAmount ? order.totalAmount.toFixed(2) : '-'}</div>
             </div>
           </div>
 
           <!-- Status History -->
           <div class="mt-6">
             <h3 class="text-sm font-bold text-amber-700 uppercase tracking-wide mb-3">📜 Status History</h3>
-            <div class="space-y-2">
+            <div id="status-history-${order.orderId}" class="space-y-2">
               ${(order.statusHistory || []).map(h => `
                 <div class="flex items-start gap-3">
                   <div class="w-6 h-6 rounded-full bg-amber-200 flex items-center justify-center text-xs font-bold text-amber-600">
@@ -231,6 +219,122 @@
       `;
     }
 
+    function statusColorClass(status) {
+      return STATUS_COLORS[status] || 'bg-amber-100 text-amber-900';
+    }
+
+    function badgeColorClass(status) {
+      return STATUS_BADGE_COLORS[status] || 'bg-amber-500';
+    }
+
+    function renderOrderCard(order) {
+      const status = order.status || 'PENDING';
+      const orderCard = document.createElement('div');
+      orderCard.className = 'bg-white rounded-2xl border-2 border-amber-200 shadow-lg p-6 transition-all duration-500 order-card';
+      orderCard.id = `order-${order.orderId}`;
+      orderCard.innerHTML = buildOrderCardHtml(order);
+      return orderCard;
+    }
+
+    function renderOrderCardHtml(order) {
+      const status = order.status || 'PENDING';
+      const statusColorClass = STATUS_COLORS[status] || 'bg-amber-100 text-amber-900';
+      const badgeColorClass = STATUS_BADGE_COLORS[status] || 'bg-amber-500';
+
+      const currentIndex = STATUS_ORDER_LIST.indexOf(status);
+      let timelineHtml = '';
+      STATUS_ORDER_LIST.forEach((statusItem, idx) => {
+        const completed = idx < currentIndex;
+        const active = idx === currentIndex;
+        const circleClass = completed ? 'bg-emerald-600' : active ? 'bg-amber-600 animate-pulse' : 'bg-amber-200';
+        const lineClass = completed ? 'bg-emerald-600' : 'bg-amber-200';
+        const labelClass = completed ? 'text-emerald-600 font-semibold' : active ? 'text-amber-900 font-semibold' : 'text-amber-400';
+
+        if (idx > 0) {
+          timelineHtml += `<div class="flex-1 h-0.5 ${lineClass} mx-2"></div>`;
+        }
+        timelineHtml += `
+          <div class="flex flex-col items-center">
+            <div class="${circleClass} w-3 h-3 rounded-full mx-auto mb-1"></div>
+            <span class="text-[10px] ${labelClass}">${STATUS_LABELS[statusItem]}</span>
+          </div>
+        `;
+      });
+
+      return `
+        <div class="bg-white rounded-2xl border-2 border-amber-200 shadow-lg p-6 transition-all duration-500 order-card" id="order-${order.orderId}">
+          <div class="flex justify-between items-start mb-6 pb-6 border-b border-amber-200">
+            <div>
+              <h2 class="text-2xl font-bold text-amber-900 mb-2">Order #${order.orderId}</div>
+              <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full font-bold text-sm shadow-sm ${statusColorClass(status)}">
+                <span class="w-2.5 h-2.5 rounded-full ${badgeColorClass(status)} animate-pulse"></span>
+                <span id="status-text-${order.orderId}">${STATUS_LABELS[status] || status}</span>
+              </div>
+            </div>
+            <div class="text-right">
+              <div class="text-xs text-amber-500 font-mono">Token: <span class="text-amber-700 font-mono">${order.orderAccessToken ? order.orderAccessToken.substring(0, 12) + '...' : 'N/A'}</span></div>
+            </div>
+          </div>
+
+          <div class="relative mx-auto max-w-md mb-6">
+            <div class="tracking-line" style="position: relative;">
+              ${timelineHtml}
+              <div class="tracking-char" id="tracking-char-${order.orderId}">🛵</div>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-xl p-6 border border-amber-200">
+            <h3 class="text-sm font-bold text-amber-700 uppercase tracking-wide mb-3">☕ Order Items</h3>
+            <div id="order-items-${order.orderId}" class="space-y-2">
+              ${(order.items || []).map(i => `
+                <div class="flex justify-between items-center py-2 border-b border-amber-50 last:border-0">
+                  <div class="flex flex-col">
+                    <div class="text-sm font-bold text-amber-900">${getItemEmoji(i.name)} ${i.quantity}× ${i.name}</div>
+                    <div class="text-xs text-amber-500">${i.category || ''}</div>
+                  </div>
+                  <span class="font-medium text-amber-900">$${(i.price * i.quantity).toFixed(2)}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4 mt-6">
+            <div class="bg-amber-50 rounded-xl p-4 border border-amber-100">
+              <div class="text-xs font-bold text-amber-600 uppercase tracking-wide mb-1">🍽️ Table / Counter</div>
+              <div class="text-lg font-bold text-amber-900" id="display-table-${order.orderId}">${order.tableNumber || '-'}</div>
+            </div>
+            <div class="bg-amber-50 rounded-xl p-4 border border-amber-100">
+              <div class="text-xs font-bold text-amber-600 uppercase tracking-wide mb-1">💰 Total Amount</div>
+              <div class="text-lg font-bold text-amber-900" id="display-total-${order.orderId}">$${order.totalAmount ? order.totalAmount.toFixed(2) : '-'}</div>
+            </div>
+          </div>
+
+          <div class="mt-6">
+            <h3 class="text-sm font-bold text-amber-700 uppercase tracking-wide mb-3">📜 Status History</h3>
+            <div id="status-history-${order.orderId}" class="space-y-2">
+              ${(order.statusHistory || []).map(h => `
+                <div class="flex items-start gap-3">
+                  <div class="w-6 h-6 rounded-full bg-amber-200 flex items-center justify-center text-xs font-bold text-amber-600">
+                    ${getStatusIcon(h.to)}
+                  </div>
+                  <div class="flex flex-col">
+                    <div class="text-sm font-bold text-amber-900">${STATUS_LABELS[h.to] || h.to}</div>
+                    <div class="text-xs text-amber-500">${h.actor || 'system'} • ${new Date(h.at).toLocaleTimeString()}</div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+
+          <div id="celebration-${order.orderId}" class="hidden text-center py-6">
+            <div class="text-6xl mb-2">🎉</div>
+            <h3 class="text-xl font-bold text-emerald-700 mb-1">Order Served!</h3>
+            <p class="text-emerald-600 text-sm">Thank you for dining with us ☕</p>
+          </div>
+        </div>
+      `;
+    }
+
     async function pollOrderStatus() {
       const allOrders = JSON.parse(localStorage.getItem('all_orders') || '[]');
       if (!allOrders || allOrders.length === 0) return;
@@ -243,18 +347,13 @@
             const currentStatus = order.status;
 
             if (newStatus !== currentStatus) {
-              // Update localStorage
               order.status = newStatus;
               order.statusHistory = res.body.order.statusHistory || order.statusHistory;
               localStorage.setItem('all_orders', JSON.stringify(allOrders));
-
-              // Update UI
               updateOrderCard(order.orderId, newStatus);
             }
           }
-        } catch (_) {
-          // Silently fail
-        }
+        } catch (_) {}
       }
     }
 
@@ -262,9 +361,7 @@
       const card = document.getElementById(`order-${orderId}`);
       if (!card) return;
 
-      const statusPill = card.querySelector('#status-pill');
-      const statusText = statusPill.querySelector('span:last-child');
-
+      const statusPill = document.getElementById(`status-text-${orderId}`);
       const statusColors = {
         PENDING: 'bg-amber-100 text-amber-900',
         PREPARING: 'bg-violet-100 text-violet-900',
@@ -280,16 +377,17 @@
         SERVED: 'bg-emerald-500'
       };
 
-      statusPill.className = 'inline-flex items-center gap-2 px-4 py-2 rounded-full font-bold text-sm shadow-sm ' + (statusColors[newStatus] || 'bg-amber-100 text-amber-900');
-      statusPill.innerHTML = `
-        <span class="w-2.5 h-2.5 rounded-full ${badgeColors[newStatus] || 'bg-amber-500'} animate-pulse"></span>
-        <span id="status-${orderId}" class="font-bold text-sm">${STATUS_LABELS[newStatus] || newStatus}</span>
-      `;
+      const pill = card.querySelector('.status-pill');
+      if (pill) {
+        pill.className = 'inline-flex items-center gap-2 px-4 py-2 rounded-full font-bold text-sm shadow-sm ' + (statusColors[newStatus] || 'bg-amber-100 text-amber-900');
+        pill.innerHTML = `
+          <span class="w-2.5 h-2.5 rounded-full ${badgeColors[newStatus] || 'bg-amber-500'} animate-pulse"></span>
+          <span id="status-text-${orderId}" class="font-bold text-sm">${STATUS_LABELS[newStatus] || newStatus}</span>
+        `;
+      }
 
-      // Update timeline
       renderTimelineWithOrderId(orderId, newStatus);
 
-      // Show celebration when served
       if (newStatus === 'SERVED') {
         const celebration = document.getElementById(`celebration-${orderId}`);
         if (celebration) celebration.classList.remove('hidden');
@@ -313,18 +411,14 @@
     }
 
     function startPolling() {
-      // Initial poll
       pollOrderStatus();
-      // Then poll every 3 seconds
-      POLL_TIMER = setInterval(pollOrderStatus, POLL_MS || 3000);
+      POLL_TIMER = setInterval(() => pollOrderStatus(), POLL_MS || 3000);
     }
 
-    // Stop polling on unload
     window.addEventListener('beforeunload', () => {
       clearInterval(POLL_TIMER);
     });
 
-    // Load orders on page load
     loadOrders();
   </script>
 </body>
