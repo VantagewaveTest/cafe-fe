@@ -245,7 +245,7 @@
           paymentMethod: payment,
           tableNumber
         });
-        const data = await response.json();
+        const data = response;
 
         if (data.ok && data.body.success) {
           // Set active order in localStorage (estimate only — backend status is truth)
