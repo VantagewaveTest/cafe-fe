@@ -270,6 +270,8 @@
 
           // Show order confirmation and redirect to tracker
           btn.textContent = 'Go to Order Tracker';
+          btn.disabled = false;
+          btn.classList.remove('opacity-50', 'cursor-not-allowed');
           btn.onclick = () => {
             window.location.href = `order-status.html?orderId=${encodeURIComponent(data.body.orderId)}`;
           };
