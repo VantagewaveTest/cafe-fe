@@ -126,8 +126,12 @@
               <div class="text-xs text-amber-500">Ready ${new Date(order.readyAt).toLocaleTimeString()}</div>
             </div>
             <div class="flex gap-2">
-              <button onclick="pickupOrder('${order.orderId}')" class="bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">Pickup</button>
-              <button onclick="serveOrder('${order.orderId}')" class="bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">Serve</button>
+              ${order.status === 'READY' ? `
+                <button onclick="pickupOrder('${order.orderId}')" class="bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">Pickup</button>
+              ` : ''}
+              ${order.status === 'PICKED_UP' ? `
+                <button onclick="serveOrder('${order.orderId}')" class="bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">Serve</button>
+              ` : ''}
             </div>
           </div>
         `).join('');
