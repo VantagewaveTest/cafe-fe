@@ -25,7 +25,7 @@
   <!-- Main Content -->
   <main class="flex-grow max-w-4xl w-full mx-auto px-4 py-8 space-y-8">
 
-    <!-- Recent Orders from Local Storage -->
+    <!-- Recent Orders -->
     <section class="space-y-4">
       <h2 class="text-lg font-bold text-amber-900 border-b border-amber-200 pb-2">Recent Orders</h2>
       <div id="recent-orders" class="space-y-3">
@@ -33,44 +33,6 @@
       </div>
     </section>
 
-    <!-- Track Any Order -->
-    <section class="bg-white rounded-2xl p-6 border border-amber-200 space-y-4">
-      <h2 class="text-lg font-bold text-amber-900 mb-4">Track Any Order</h2>
-      <p class="text-amber-600 text-sm mb-4">
-        Enter your Order ID and Tracking Token to check the status of any order.
-      </p>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label class="block text-xs font-bold text-amber-900 uppercase tracking-wide mb-1">Order ID</label>
-          <input type="text" id="track-order-id" class="w-full border border-amber-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 outline-none" placeholder="e.g. ORD--179214..." />
-        </div>
-        <div>
-          <label class="block text-xs font-bold text-amber-900 uppercase tracking-wide mb-1">Tracking Token</label>
-          <input type="text" id="track-order-token" class="w-full border border-amber-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 outline-none" placeholder="Tracking token from checkout" />
-        </div>
-      </div>
-
-      <div class="mt-4">
-        <button id="track-order-btn" class="w-full bg-amber-800 hover:bg-amber-900 text-white py-3 rounded-lg font-semibold shadow-lg transition">
-          Track Order
-        </button>
-      </div>
-
-      <div id="track-error" class="hidden text-red-600 text-sm mt-2"></div>
-      <div id="track-success" class="hidden text-green-600 text-sm mt-2"></div>
-    </section>
-
-    <!-- Help -->
-    <section class="bg-amber-50 border border-amber-200 rounded-xl p-6">
-      <h3 class="text-sm font-bold text-amber-900 uppercase tracking-wide mb-2">How to Track</h3>
-      <ul class="text-sm text-amber-700 space-y-2 list-disc list-inside">
-        <li>After placing an order, you receive an <strong>Order ID</strong> and <strong>Tracking Token</strong>.</li>
-        <li>Save these details — you'll need them to check your order status.</li>
-        <li>Enter both ID and token above to see real-time status updates.</li>
-        <li>Status flows: <strong>Placed → Preparing → Ready → Picked Up → Served</strong></li>
-      </ul>
-    </section>
   </main>
 
   <!-- Footer -->
@@ -79,11 +41,6 @@
   </footer>
 
   <script>
-    const ORDER_ID_INPUT = document.getElementById('track-order-id');
-    const ORDER_TOKEN_INPUT = document.getElementById('track-order-token');
-    const TRACK_BTN = document.getElementById('track-order-btn');
-    const ERROR_EL = document.getElementById('track-error');
-    const SUCCESS_EL = document.getElementById('track-success');
     const RECENT_ORDERS_EL = document.getElementById('recent-orders');
 
     // Load recent orders from localStorage
@@ -92,49 +49,33 @@
       RECENT_ORDERS_EL.innerHTML = '';
 
       if (!activeOrder || !activeOrder.orderId) {
-        RECENT_ORDERS_EL.innerHTML = '<p class="text-amber-500 text-sm text-center py-4">No recent orders found. Place an order to start tracking.</p>';
+        RECENT_ORDERS_EL.innerHTML = '<p class="text-amber-500 text-sm text-center py-8">No recent orders found. Place an order to start tracking.</p>';
         return;
       }
 
       const order = activeOrder;
       const orderCard = document.createElement('div');
-      orderCard.className = 'bg-white rounded-xl p-4 border border-amber-200 flex justify-between items-center';
+      orderCard.className = 'bg-white rounded-xl p-6 border border-amber-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4';
       orderCard.innerHTML = `
-        <div>
-          <div class="font-bold text-amber-900">${order.orderId}</div>
-          <div class="text-xs text-amber-600">Estimated prep: ${order.totalPrepTime ? Math.ceil(order.totalPrepTime / 60) : '?'} min</div>
-          <div class="text-xs text-amber-500">Token: ${order.orderAccessToken ? order.orderAccessToken.substring(0, 8) + '...' : 'N/A'}</div>
+        <div class="flex flex-col gap-1">
+          <div class="flex justify-between items-start gap-2">
+            <div class="font-bold text-amber-900 text-lg">${order.orderId}</div>
+            <span class="text-xs font-semibold bg-amber-100 text-amber-800 px-2 py-1 rounded-full">Active</span>
+          </div>
+          <div class="text-xs text-amber-600">Items: Placed order</div>
+          <div class="text-xs text-amber-500">Tracking Token: ${order.orderAccessToken ? order.orderAccessToken.substring(0, 12) + '...' : 'N/A'}</div>
+          <div class="text-xs text-amber-400">Total Prep: ~${order.totalPrepTime ? Math.ceil(order.totalPrepTime / 60) : '?'} min</div>
         </div>
-        <button onclick="trackOrder('${order.orderId}', '${order.orderAccessToken}')" class="bg-amber-800 hover:bg-amber-900 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">Track</button>
+        <button onclick="trackOrder('${order.orderId}', '${order.orderAccessToken}')" class="bg-amber-800 hover:bg-amber-900 text-white px-6 py-3 rounded-lg font-semibold transition shadow-md">Track Order</button>
       `;
       RECENT_ORDERS_EL.appendChild(orderCard);
     }
 
     // Track order by navigating to order-status page
     function trackOrder(orderId, orderToken) {
-      // Store token in sessionStorage for the order-status page
       sessionStorage.setItem('orderAccessToken', orderToken);
       window.location.href = `order-status.html?orderId=${encodeURIComponent(orderId)}`;
     }
-
-    // Track from manual input
-    TRACK_BTN.addEventListener('click', () => {
-      const orderId = ORDER_ID_INPUT.value.trim();
-      const orderToken = ORDER_TOKEN_INPUT.value.trim();
-
-      if (!orderId || !orderToken) {
-        ERROR_EL.textContent = 'Please enter both Order ID and Tracking Token.';
-        ERROR_EL.classList.remove('hidden');
-        SUCCESS_EL.classList.add('hidden');
-        return;
-      }
-
-      ERROR_EL.classList.add('hidden');
-      SUCCESS_EL.classList.add('hidden');
-
-      sessionStorage.setItem('orderAccessToken', orderToken);
-      window.location.href = `order-status.html?orderId=${encodeURIComponent(orderId)}`;
-    });
 
     // Load recent orders on page load
     loadRecentOrders();
