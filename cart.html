@@ -102,25 +102,6 @@
     </div>
   </main>
 
-  <!-- Order Tracking Confirmation (hidden until order placed) -->
-  <div id="tracking-section" class="hidden mt-8 bg-amber-50 border border-amber-200 rounded-2xl p-6">
-    <h3 class="text-lg font-bold text-amber-900 mb-3">📋 Your Order Tracking</h3>
-    <div class="space-y-2 text-sm text-amber-800">
-      <div class="flex justify-between">
-        <span class="font-bold">Order ID:</span>
-        <span id="tracking-order-id" class="font-mono text-amber-900"></span>
-      </div>
-      <div class="flex justify-between">
-        <span class="font-bold">Tracking Token:</span>
-        <span id="tracking-token" class="font-mono text-amber-900 text-xs truncate"></span>
-      </div>
-      <div class="flex justify-between mt-2">
-        <span class="text-xs text-amber-500">Save this token to track your order from any device.</span>
-      </div>
-    </div>
-    <a href="#" id="tracking-link" class="mt-4 inline-block bg-amber-800 hover:bg-amber-900 text-white px-4 py-2 rounded-lg text-sm font-medium">Track Order →</a>
-  </div>
-
   <!-- Footer -->
   <footer class="bg-amber-950 text-amber-300/60 py-4 text-center text-xs">
     &copy; 2026 The Daily Grind Café. Freshly brewed with love.
@@ -220,6 +201,7 @@
       if (items.length === 0) {
         document.getElementById('checkout-status').textContent = 'Your cart is empty.';
         document.getElementById('checkout-status').classList.remove('hidden');
+        document.getElementById('checkout-status').classList.add('text-red-600');
         return;
       }
 
@@ -229,11 +211,10 @@
 
       // Table number is compulsory when Table option is selected
       if (orderType === 'table' && !tableInput) {
+        const status = document.getElementById('checkout-status');
         status.textContent = '❌ Please enter a table number before placing order.';
         status.classList.remove('hidden');
         status.classList.add('text-red-600');
-        btn.textContent = 'Pay & Place Order';
-        btn.disabled = false;
         document.getElementById('tableInput').focus();
         document.getElementById('tableInput').classList.add('border-red-500', 'ring-2', 'ring-red-500');
         document.getElementById('tableInput').addEventListener('input', function () {
@@ -258,7 +239,6 @@
       status.classList.add('hidden');
 
       try {
-        // Send items only — server calculates totals, ignores client-supplied price/total
         const response = await CafeApi.post('/api/orders', {
           items: items.map(i => ({ id: i.id, quantity: i.quantity })),
           paymentMethod: payment,
@@ -267,7 +247,7 @@
         const data = response;
 
         if (data.ok && data.body.success) {
-          // Set active order in localStorage (estimate only — backend status is truth)
+          // Set active order in localStorage
           const endTime = Date.now() + (data.body.totalPrepTime * 1000);
           setActiveOrder({
             orderId: data.body.orderId,
@@ -276,18 +256,18 @@
             celebrated: false
           });
 
-          // Store order access token in sessionStorage for order-status.html API calls
+          // Store order access token
           sessionStorage.setItem('orderAccessToken', data.body.orderAccessToken);
 
           // Clear cart
           localStorage.removeItem('cafe_cart');
           cart = {};
 
-          status.textContent = `✅ Payment simulated! Order #${data.body.orderId} placed successfully.`;
+          status.textContent = '✅ Payment simulated! Order #' + data.body.orderId + ' placed successfully.';
           status.classList.remove('hidden');
           status.classList.add('text-green-600', 'font-bold', 'animate-bounce');
 
-          // Redirect to My Orders page for tracking
+          // Redirect to My Orders
           btn.textContent = 'Go to My Orders';
           btn.disabled = false;
           btn.classList.remove('opacity-50', 'cursor-not-allowed');
