@@ -17,6 +17,8 @@
       <a href="index.html" class="hover:text-amber-300 transition">Home</a>
       <a href="menu.html" class="hover:text-amber-300 transition">Menu</a>
       <a href="cart.html" class="underline underline-offset-4">Cart</a>
+      <a href="tracking.html" class="hover:text-amber-300 transition">Track</a>
+      <a href="login.html" class="hover:text-amber-300 transition">Staff</a>
     </nav>
   </header>
 
@@ -56,6 +58,24 @@
           </div>
         </div>
 
+        <div class="mb-5">
+          <label class="block text-xs font-bold text-amber-900 uppercase tracking-wide mb-2">Fulfillment</label>
+          <div class="space-y-2 text-sm text-amber-800">
+            <label class="flex items-center gap-2.5 p-2.5 rounded-lg border border-amber-200 cursor-pointer hover:bg-amber-50">
+              <input type="radio" name="fulfillment" value="table" checked onchange="toggleTable(true)" class="text-amber-800 focus:ring-amber-700">
+              <span>🍽️ Table Service</span>
+            </label>
+            <label class="flex items-center gap-2.5 p-2.5 rounded-lg border border-amber-200 cursor-pointer hover:bg-amber-50">
+              <input type="radio" name="fulfillment" value="counter" onchange="toggleTable(false)" class="text-amber-800 focus:ring-amber-700">
+              <span>🧾 Counter Pickup</span>
+            </label>
+            <div id="table-number-wrap" class="pt-1">
+              <input id="table-number" type="text" placeholder="Table number (e.g. T4)"
+                class="w-full border border-amber-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-600">
+            </div>
+          </div>
+        </div>
+
         <div class="mb-6">
           <label class="block text-xs font-bold text-amber-900 uppercase tracking-wide mb-2">Payment Option (Simulation)</label>
           <div class="space-y-2 text-sm text-amber-800">
@@ -71,6 +91,7 @@
               <input type="radio" name="payment" value="cash" class="text-amber-800 focus:ring-amber-700">
               <span>💵 Cash at Counter</span>
             </label>
+            <p class="text-xs text-amber-600 italic pt-1">Simulated payment — no real charge is made.</p>
           </div>
         </div>
 
@@ -173,15 +194,33 @@
       document.getElementById('summary-prep-time').textContent = `⏱️ ${totalPrep} seconds`;
     }
 
+    function toggleTable(isTable) {
+      document.getElementById('table-number-wrap').style.display = isTable ? 'block' : 'none';
+    }
+
+    function selectedRadio(name) {
+      const el = document.querySelector(`input[name="${name}"]:checked`);
+      return el ? el.value : null;
+    }
+
     async function placeOrder() {
-      const items = Object.values(cart);
-      if (items.length === 0) {
+      const cartItems = Object.values(cart);
+      if (cartItems.length === 0) {
         alert('Your cart is empty.');
         return;
       }
 
-      let subtotal = items.reduce((sum, i) => sum + (i.price * i.quantity), 0);
-      let totalAmount = subtotal + (subtotal * 0.05);
+      const fulfillment = selectedRadio('fulfillment') || 'table';
+      const tableNumber = document.getElementById('table-number').value.trim();
+      if (fulfillment === 'table' && !tableNumber) {
+        alert('Please enter your table number for table service.');
+        return;
+      }
+      const paymentMethod = selectedRadio('payment') || 'card';
+
+      // Send only trusted menu IDs and quantities. Prices and totals are
+      // calculated by the server — the backend ignores any client prices.
+      const items = cartItems.map(i => ({ id: i.id, quantity: i.quantity }));
 
       const btn = document.getElementById('checkout-btn');
       btn.textContent = 'Processing Payment...';
@@ -191,15 +230,22 @@
         const response = await fetch(`${API_BASE}/orders`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ items, totalAmount })
+          body: JSON.stringify({
+            items,
+            fulfillment,
+            tableNumber: fulfillment === 'table' ? tableNumber : '',
+            paymentMethod
+          })
         });
         const data = await response.json();
 
-        if (data.success) {
-          // Set active order in localStorage with end timestamp
+        if (response.ok && data.success) {
+          // Store the active order with its private tracking token so the
+          // tracking page can poll the backend. Countdown is an estimate only.
           const endTime = Date.now() + (data.totalPrepTime * 1000);
           setActiveOrder({
             orderId: data.orderId,
+            trackingToken: data.trackingToken,
             endTime,
             celebrated: false
           });
@@ -208,22 +254,21 @@
           localStorage.removeItem('cafe_cart');
           cart = {};
 
-          alert('Payment Successful! Order placed successfully.');
-          window.location.href = 'menu.html';
+          window.location.href = 'tracking.html';
         } else {
-          alert('Failed to place order: ' + data.message);
+          alert('Failed to place order: ' + (data.message || response.statusText));
           btn.textContent = 'Pay & Place Order';
           btn.disabled = false;
         }
       } catch (err) {
         console.error('Checkout error:', err);
-        alert('Network error connecting to backend. Please make sure cafe-be is running.');
+        alert('Network error connecting to backend. Please make sure cafe-be is running on port 5000.');
         btn.textContent = 'Pay & Place Order';
         btn.disabled = false;
       }
     }
 
-    window.addEventListener('DOMContentLoaded', renderCart);
+    window.addEventListener('DOMContentLoaded', () => { renderCart(); toggleTable(true); });
   </script>
 </body>
 </html>

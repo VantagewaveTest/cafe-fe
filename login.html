@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Daily Grind Café - Staff Login</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-amber-50 min-h-screen flex flex-col justify-between font-sans">
+
+  <header class="bg-amber-900 text-amber-100 shadow-md py-4 px-6 flex justify-between items-center">
+    <div class="text-2xl font-bold tracking-wider flex items-center gap-2">
+      <span>☕</span> The Daily Grind Café
+    </div>
+    <nav class="space-x-6 text-sm font-medium">
+      <a href="index.html" class="hover:text-amber-300 transition">Home</a>
+      <a href="menu.html" class="hover:text-amber-300 transition">Menu</a>
+      <a href="login.html" class="underline underline-offset-4">Staff</a>
+    </nav>
+  </header>
+
+  <main class="flex-grow flex items-center justify-center px-4 py-12">
+    <div class="w-full max-w-sm bg-white rounded-2xl p-8 shadow-md border border-amber-200">
+      <h1 class="text-2xl font-bold text-amber-900 mb-1 text-center">Staff Login</h1>
+      <p class="text-amber-700/80 text-sm text-center mb-6">Chef &amp; Waiter access</p>
+
+      <div id="login-error" class="hidden mb-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2"></div>
+
+      <label class="block text-xs font-bold text-amber-900 uppercase tracking-wide mb-1">Username</label>
+      <input id="username" type="text" autocomplete="username"
+        class="w-full border border-amber-300 rounded-lg px-3 py-2 mb-4 text-sm focus:outline-none focus:ring-2 focus:ring-amber-600">
+
+      <label class="block text-xs font-bold text-amber-900 uppercase tracking-wide mb-1">Password</label>
+      <input id="password" type="password" autocomplete="current-password"
+        class="w-full border border-amber-300 rounded-lg px-3 py-2 mb-6 text-sm focus:outline-none focus:ring-2 focus:ring-amber-600">
+
+      <button id="login-btn" onclick="login()"
+        class="w-full bg-amber-800 hover:bg-amber-900 text-white py-3 rounded-xl font-semibold shadow-lg transition">
+        Sign In
+      </button>
+
+      <p class="text-xs text-amber-600 italic mt-4 text-center">Demo credentials: chef1 / chef-secret, waiter1 / waiter-secret</p>
+    </div>
+  </main>
+
+  <footer class="bg-amber-950 text-amber-300/60 py-4 text-center text-xs">
+    &copy; 2026 The Daily Grind Café. Freshly brewed with love.
+  </footer>
+
+  <script src="app.js"></script>
+  <script>
+    function showErr(msg) {
+      const el = document.getElementById('login-error');
+      el.textContent = msg;
+      el.classList.remove('hidden');
+    }
+
+    async function login() {
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      const btn = document.getElementById('login-btn');
+      if (!username || !password) { showErr('Enter username and password.'); return; }
+
+      btn.textContent = 'Signing in…';
+      btn.disabled = true;
+      try {
+        const res = await fetch(`${API_BASE}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          showErr(data.message || 'Login failed.');
+          btn.textContent = 'Sign In'; btn.disabled = false;
+          return;
+        }
+        // Store the server-verified identity and role — not a user-selected role.
+        localStorage.setItem('cafe_staff', JSON.stringify({
+          token: data.token, role: data.role, username: data.username,
+          expiresAt: Date.now() + (data.expiresIn * 1000)
+        }));
+        window.location.href = data.role === 'CHEF' ? 'chef.html' : 'waiter.html';
+      } catch (err) {
+        console.error('Login error:', err);
+        showErr('Network error reaching backend. Is cafe-be running on port 5000?');
+        btn.textContent = 'Sign In'; btn.disabled = false;
+      }
+    }
+
+    document.getElementById('password').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+  </script>
+</body>
+</html>

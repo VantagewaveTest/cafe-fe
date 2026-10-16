@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Daily Grind Café - Service</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-amber-50 min-h-screen flex flex-col font-sans">
+
+  <header class="bg-amber-900 text-amber-100 shadow-md py-4 px-6 flex justify-between items-center">
+    <div class="text-2xl font-bold tracking-wider flex items-center gap-2">
+      <span>🚶</span> Service — <span id="who" class="font-normal text-amber-200"></span>
+    </div>
+    <nav class="space-x-6 text-sm font-medium flex items-center">
+      <a href="#orders" class="hover:text-amber-300 transition">Orders</a>
+      <a href="#history" class="hover:text-amber-300 transition">History</a>
+      <button onclick="logout()" class="bg-amber-700 hover:bg-amber-800 px-4 py-1.5 rounded-lg">Logout</button>
+    </nav>
+  </header>
+
+  <main class="flex-grow max-w-6xl w-full mx-auto px-4 py-6 pb-16">
+    <div id="auth-error" class="hidden mb-6 text-center text-amber-900 bg-red-50 border border-red-300 rounded-xl px-4 py-3"></div>
+
+    <div id="content" class="hidden">
+      <div class="grid grid-cols-3 gap-4 mb-6">
+        <div class="bg-white rounded-2xl p-4 shadow-md border border-amber-200 text-center">
+          <div class="text-3xl font-bold text-amber-600" id="count-preparing">0</div>
+          <div class="text-xs uppercase tracking-wide text-amber-600 font-bold">Preparing</div>
+        </div>
+        <div class="bg-white rounded-2xl p-4 shadow-md border border-amber-200 text-center">
+          <div class="text-3xl font-bold text-emerald-700" id="count-ready">0</div>
+          <div class="text-xs uppercase tracking-wide text-amber-600 font-bold">Ready</div>
+        </div>
+        <div class="bg-white rounded-2xl p-4 shadow-md border border-amber-200 text-center">
+          <div class="text-3xl font-bold text-amber-800" id="count-picked">0</div>
+          <div class="text-xs uppercase tracking-wide text-amber-600 font-bold">Picked Up</div>
+        </div>
+      </div>
+
+      <section id="orders" class="mb-8">
+        <h2 class="text-xl font-bold text-amber-900 mb-3">Active Orders</h2>
+        <div id="orders-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+      </section>
+
+      <section id="history" class="bg-white rounded-2xl p-5 shadow-md border border-amber-200">
+        <div class="flex justify-between items-center mb-3">
+          <h2 class="text-lg font-bold text-amber-900">Service History</h2>
+          <input type="date" id="hist-date" onchange="loadHistory()" class="border border-amber-300 rounded-lg px-2 py-1 text-sm">
+        </div>
+        <ul id="history-list" class="space-y-2 text-sm text-amber-800 max-h-72 overflow-y-auto"></ul>
+      </section>
+    </div>
+  </main>
+
+  <footer class="bg-amber-950 text-amber-300/60 py-4 text-center text-xs mt-auto">
+    &copy; 2026 The Daily Grind Café. Freshly brewed with love.
+  </footer>
+
+  <script src="app.js"></script>
+  <script>
+    const POLL_MS = 3000;
+    let staff = null;
+
+    function logout() { localStorage.removeItem('cafe_staff'); window.location.href = 'login.html'; }
+
+    function requireAuth() {
+      const raw = localStorage.getItem('cafe_staff');
+      if (!raw) { window.location.href = 'login.html'; return null; }
+      const s = JSON.parse(raw);
+      if (s.expiresAt && Date.now() > s.expiresAt) {
+        localStorage.removeItem('cafe_staff');
+        window.location.href = 'login.html?expired=1';
+        return null;
+      }
+      return s;
+    }
+
+    function showAuthError(msg) {
+      const el = document.getElementById('auth-error');
+      el.textContent = msg;
+      el.classList.remove('hidden');
+      document.getElementById('content').classList.add('hidden');
+    }
+
+    async function api(method, path) {
+      const res = await fetch(`${API_BASE}${path}`, {
+        method,
+        headers: { 'Authorization': `Bearer ${staff.token}` }
+      });
+      if (res.status === 401 || res.status === 403) {
+        logout();
+        throw new Error('Session invalid or insufficient role.');
+      }
+      const data = await res.json();
+      return { res, data };
+    }
+
+    const STATUS_BADGE = {
+      PREPARING: 'bg-amber-500 text-white',
+      READY: 'bg-emerald-600 text-white',
+      PICKED_UP: 'bg-amber-800 text-white',
+      SERVED: 'bg-gray-500 text-white',
+      PENDING: 'bg-amber-200 text-amber-900'
+    };
+
+    function itemLines(items) {
+      return (items || []).map(i => `<li>${i.quantity} × ${i.name}</li>`).join('');
+    }
+
+    function renderOrders(data) {
+      document.getElementById('count-preparing').textContent = data.counts.PREPARING;
+      document.getElementById('count-ready').textContent = data.counts.READY;
+      document.getElementById('count-picked').textContent = data.counts.PICKED_UP;
+
+      const list = document.getElementById('orders-list');
+      list.innerHTML = data.orders.length ? data.orders.map(o => {
+        let action = '';
+        if (o.status === 'READY') {
+          action = `<button onclick="act('${o.orderId}','pickup')" class="bg-amber-800 hover:bg-amber-900 text-white text-xs px-4 py-1.5 rounded-lg font-medium">Mark Picked Up</button>`;
+        } else if (o.status === 'PICKED_UP') {
+          action = `<button onclick="act('${o.orderId}','serve')" class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs px-4 py-1.5 rounded-lg font-medium">Mark Served</button>`;
+        } else {
+          action = `<span class="text-xs text-amber-500 italic">In kitchen…</span>`;
+        }
+        return `
+        <div class="bg-white rounded-2xl p-4 shadow-md border border-amber-200">
+          <div class="flex justify-between items-center mb-2">
+            <span class="font-bold text-amber-900">#${o.orderId}</span>
+            <span class="text-xs px-2 py-0.5 rounded-full font-semibold ${STATUS_BADGE[o.status] || 'bg-amber-100 text-amber-800'}">${o.status.replace('_', ' ')}</span>
+          </div>
+          <div class="text-xs text-amber-700 mb-2">${o.fulfillment === 'counter' ? '🧾 Counter pickup' : '🍽️ Table ' + (o.tableNumber || '—')}</div>
+          <ul class="text-sm text-amber-800 mb-3 list-disc list-inside">${itemLines(o.items)}</ul>
+          <div class="flex justify-end">${action}</div>
+        </div>`;
+      }).join('') : `<p class="text-amber-600 text-sm">No active orders to serve.</p>`;
+    }
+
+    async function act(id, action) {
+      try {
+        const { res, data } = await api('PATCH', `/service/orders/${id}/${action}`);
+        if (!res.ok) { alert(data.message || 'Action failed (' + res.status + ')'); }
+        refresh();
+        loadHistory();
+      } catch (e) { console.error(e); }
+    }
+
+    async function refresh() {
+      try {
+        const { data } = await api('GET', '/service/orders');
+        renderOrders(data);
+      } catch (e) { console.error(e); }
+    }
+
+    async function loadHistory() {
+      const d = document.getElementById('hist-date').value;
+      try {
+        const { data } = await api('GET', `/service/history${d ? '?date=' + d : ''}`);
+        document.getElementById('history-list').innerHTML = data.history.length
+          ? data.history.map(o => `<li class="flex justify-between border-b border-amber-100 pb-1"><span>#${o.orderId} — ${o.fulfillment === 'counter' ? 'Counter' : 'Table ' + (o.tableNumber || '—')}</span><span class="text-amber-600">${new Date(o.statusTimestamps.SERVED).toLocaleString()}</span></li>`).join('')
+          : `<li class="text-amber-600">No served orders for this date.</li>`;
+      } catch (e) { console.error(e); }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      staff = requireAuth();
+      if (!staff) return;
+      if (staff.role !== 'WAITER') { showAuthError('This dashboard is for WAITER staff only. You are signed in as ' + staff.role + '.'); return; }
+      document.getElementById('content').classList.remove('hidden');
+      document.getElementById('who').textContent = staff.username;
+      refresh(); loadHistory();
+      setInterval(refresh, POLL_MS);
+    });
+  </script>
+</body>
+</html>
