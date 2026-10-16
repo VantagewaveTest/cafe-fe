@@ -18,76 +18,19 @@
       <div class="text-xl font-bold">My Orders</div>
     </div>
     <div class="text-xs text-amber-200 bg-amber-800 px-2 py-1 rounded-full">
-      Live tracking updates
+      Track your orders
     </div>
   </header>
 
   <!-- Main Content -->
   <main class="flex-grow max-w-4xl w-full mx-auto px-4 py-8 space-y-8">
 
-    <!-- Loading State -->
-    <div id="loading-state" class="text-center py-12">
-      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-900 mx-auto mb-4"></div>
-      <p class="text-amber-700 font-medium">Loading your order...</p>
-    </div>
-
-    <!-- Order Tracking Content -->
-    <div id="order-content" class="hidden space-y-6">
-
-      <!-- Status Header -->
-      <div class="bg-white rounded-2xl p-6 border border-amber-200 text-center">
-        <h2 class="text-lg font-bold text-amber-900 mb-2">Order #<span id="display-order-id"></span></h2>
-        <div id="status-pill" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-100 text-amber-900 font-bold text-sm mb-4">
-          <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-          <span id="status-text">Loading...</span>
-        </div>
-        <div class="flex items-center justify-between text-xs text-amber-500 mt-4">
-          <!-- Timeline steps -->
-        </div>
+    <section class="space-y-4">
+      <h2 class="text-lg font-bold text-amber-900 border-b border-amber-200 pb-2">My Orders</h2>
+      <div id="recent-orders" class="space-y-3">
+        <!-- Orders will be rendered here with tracking buttons -->
       </div>
-
-      <!-- Order Details -->
-      <div class="bg-white rounded-2xl p-6 border border-amber-200">
-        <h3 class="text-sm font-bold text-amber-700 uppercase tracking-wide mb-3">Order Items</h3>
-        <div id="order-items" class="space-y-2 text-sm text-amber-800">
-          <!-- Items rendered here -->
-        </div>
-        <div class="mt-4 pt-4 border-t border-amber-100">
-          <div class="flex justify-between text-sm mb-1">
-            <span class="text-amber-600">Table / Counter:</span>
-            <span id="display-table" class="font-medium text-amber-900">-</span>
-          </div>
-          <div class="flex justify-between text-sm mb-1">
-            <span class="text-amber-600">Total:</span>
-            <span id="display-total" class="font-bold text-amber-900">-</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Status History -->
-      <div class="bg-white rounded-2xl p-6 border border-amber-200">
-        <h3 class="text-sm font-bold text-amber-700 uppercase tracking-wide mb-3">Status History</h3>
-        <div id="status-history" class="space-y-3">
-          <!-- History rendered here -->
-        </div>
-      </div>
-
-      <!-- Estimate Notice -->
-      <div class="bg-amber-50 border border-amber-200 rounded-xl p-4">
-        <p class="text-sm text-amber-700">
-          <strong>Note:</strong> The countdown below is an <strong>estimate only</strong>. It does not mark your order as READY — the kitchen confirms readiness through the system.
-        </p>
-      </div>
-
-    </div>
-
-    <!-- Empty State -->
-    <div id="empty-state" class="hidden text-center py-12">
-      <div class="text-amber-500 text-sm text-center">
-        <p>No recent orders found.</p>
-        <p class="text-sm text-amber-400 mt-2">Place an order to start tracking.</p>
-      </div>
-    </div>
+    </section>
 
   </main>
 
@@ -97,180 +40,47 @@
   </footer>
 
   <script>
-    const ORDER_ID_INPUT = document.getElementById('track-order-id');
-    const ORDER_TOKEN_INPUT = document.getElementById('track-order-token');
-    const TRACK_BTN = document.getElementById('track-order-btn');
-    const ERROR_EL = document.getElementById('track-error');
-    const SUCCESS_EL = document.getElementById('track-success');
     const RECENT_ORDERS_EL = document.getElementById('recent-orders');
 
-    const LOADING_EL = document.getElementById('loading-state');
-    const CONTENT_EL = document.getElementById('order-content');
-    const EMPTY_EL = document.getElementById('empty-state');
-
-    const STATUS_PILL = document.getElementById('status-pill');
-    const STATUS_TEXT = document.getElementById('status-text');
-    const STATUS_TIMELINE = document.getElementById('status-timeline');
-    const ORDER_ITEMS_EL = document.getElementById('order-items');
-    const DISPLAY_ORDER_ID = document.getElementById('display-order-id');
-    const DISPLAY_TABLE = document.getElementById('display-table');
-    const DISPLAY_TOTAL = document.getElementById('display-total');
-    const STATUS_HISTORY_EL = document.getElementById('status-history');
-
-    const STATUS_ORDER_LIST = ['PENDING', 'PREPARING', 'READY', 'PICKED_UP', 'SERVED'];
-    const STATUS_LABELS = {
-      PENDING: 'Placed',
-      PREPARING: 'Preparing',
-      READY: 'Ready',
-      PICKED_UP: 'Picked Up',
-      SERVED: 'Served'
-    };
-
-    let POLL_TIMER = null;
-
-    // Load recent orders from localStorage
     function loadRecentOrders() {
       const activeOrder = JSON.parse(localStorage.getItem('active_cafe_order') || 'null');
+      RECENT_ORDERS_EL.innerHTML = '';
 
       if (!activeOrder || !activeOrder.orderId) {
-        LOADING_EL.classList.add('hidden');
-        CONTENT_EL.classList.add('hidden');
-        EMPTY_EL.classList.remove('hidden');
+        RECENT_ORDERS_EL.innerHTML = `
+          <div class="text-center py-12">
+            <div class="text-amber-500 text-sm text-center py-4">No recent orders found.</p>
+            <a href="cart.html" class="text-amber-600 text-sm hover:underline mt-2 inline-block">Place an order to start tracking</a>
+          </div>
+        `;
         return;
       }
 
-      LOADING_EL.classList.add('hidden');
-      CONTENT_EL.classList.remove('hidden');
-      EMPTY_EL.classList.add('hidden');
-
       const order = activeOrder;
-      DISPLAY_ORDER_ID.textContent = order.orderId;
-      DISPLAY_TABLE.textContent = order.tableNumber || '-';
-      DISPLAY_TOTAL.textContent = `$${order.totalAmount ? order.totalAmount.toFixed(2) : '-'}`;
-
-      // Set initial status
-      const status = order.status || 'PENDING';
-      const statusColors = {
-        PENDING: 'bg-amber-100 text-amber-900',
-        PREPARING: 'bg-violet-100 text-violet-900',
-        READY: 'bg-sky-100 text-sky-900',
-        PICKED_UP: 'bg-blue-100 text-blue-900',
-        SERVED: 'bg-emerald-100 text-emerald-900'
-      };
-      STATUS_PILL.className = `inline-flex items-center gap-2 px-4 py-2 rounded-full font-bold text-sm mb-4 ${statusColors[status] || 'bg-amber-100 text-amber-900'}`;
-      STATUS_PILL.innerHTML = `
-        <span class="w-2 h-2 rounded-full ${status === 'SERVED' ? 'bg-emerald-600' : status === 'READY' ? 'bg-sky-600' : status === 'PREPARING' ? 'bg-violet-600' : status === 'PICKED_UP' ? 'bg-blue-600' : 'bg-amber-500 animate-pulse'}"></span>
-        <span id="status-text">${STATUS_LABELS[status] || status}</span>
-      `;
-
-      // Render timeline
-      renderStatusTimeline(status);
-
-      // Items
-      ORDER_ITEMS_EL.innerHTML = (order.items || []).map(i => `
-        <div class="flex justify-between items-center pb-2 border-b border-amber-50 last:border-0">
-          <span class="text-amber-700">${i.quantity}× ${i.name}</span>
-          <span class="font-medium text-amber-900">$${(i.price * i.quantity).toFixed(2)}</span>
-        </div>
-      `).join('');
-
-      // History
-      STATUS_HISTORY_EL.innerHTML = (order.statusHistory || []).map(h => `
-        <div class="flex justify-between items-center text-sm">
-          <span class="text-amber-600">${h.from || '—'} → ${h.to}</span>
-          <span class="text-xs text-amber-400">${h.actor || 'system'} • ${new Date(h.at).toLocaleTimeString()}</span>
-        </div>
-      `).join('');
-
-      // Start polling
-      startPolling(order.orderId, order.orderAccessToken);
-    }
-
-    function renderStatusTimeline(currentStatus) {
-      const currentIndex = STATUS_ORDER_LIST.indexOf(currentStatus);
-      let html = '';
-      STATUS_ORDER_LIST.forEach((status, idx) => {
-        const completed = idx < currentIndex;
-        const active = idx === currentIndex;
-        const circleClass = completed ? 'bg-emerald-600' : active ? 'bg-amber-600 animate-pulse' : 'bg-amber-200';
-        const lineClass = completed ? 'bg-emerald-600' : 'bg-amber-200';
-        const labelClass = completed ? 'text-emerald-600 font-semibold' : active ? 'text-amber-900 font-semibold' : 'text-amber-400';
-
-        if (idx > 0) {
-          html += `<div class="flex-1 h-0.5 ${lineClass} mx-2"></div>`;
-        }
-        html += `
-          <div class="flex flex-col items-center">
-            <div class="${circleClass} w-3 h-3 rounded-full mx-auto mb-1"></div>
-            <span class="text-[10px] ${labelClass}">${STATUS_LABELS[status]}</span>
+      const orderCard = document.createElement('div');
+      orderCard.className = 'bg-white rounded-xl p-6 border border-amber-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 cursor-pointer hover:bg-amber-50 transition';
+      orderCard.onclick = () => trackOrder(order.orderId, order.orderAccessToken);
+      orderCard.innerHTML = `
+        <div class="flex flex-col gap-2">
+          <div class="flex justify-between items-start gap-2">
+            <div class="font-bold text-amber-900 text-lg">${order.orderId}</div>
+            <span class="text-xs font-semibold bg-amber-100 text-amber-800 px-2 py-1 rounded-full">Active</span>
           </div>
-        `;
-      });
-      STATUS_TIMELINE.innerHTML = html;
+          <div class="text-xs text-amber-600 mb-1">
+            Tracking Token: <span class="font-mono text-xs truncate">${order.orderAccessToken ? order.orderAccessToken.substring(0, 12) + '...' : 'N/A'}</span>
+          </div>
+          <div class="text-xs text-amber-400">Estimated prep: ~${order.totalPrepTime ? Math.ceil(order.totalPrepTime / 60) : '?'} min</div>
+        </div>
+        <button onclick="event.stopPropagation(); trackOrder('${order.orderId}', '${order.orderAccessToken}')" class="bg-amber-800 hover:bg-amber-900 text-white px-6 py-3 rounded-lg font-semibold transition shadow-md">Track Order</button>
+      `;
+      RECENT_ORDERS_EL.appendChild(orderCard);
     }
 
-    async function pollOrderStatus(orderId, orderToken) {
-      try {
-        const res = await CafeApi.get(`/api/orders/${orderId}`);
-
-        if (res.ok && res.body.success) {
-          const order = res.body.order;
-          const status = order.status;
-
-          // Update status pill
-          const statusColors = {
-            PENDING: 'bg-amber-100 text-amber-900',
-            PREPARING: 'bg-violet-100 text-violet-900',
-            READY: 'bg-sky-100 text-sky-900',
-            PICKED_UP: 'bg-blue-100 text-blue-900',
-            SERVED: 'bg-emerald-100 text-emerald-900'
-          };
-          STATUS_PILL.className = `inline-flex items-center gap-2 px-4 py-2 rounded-full font-bold text-sm mb-4 ${statusColors[status] || 'bg-amber-100 text-amber-900'}`;
-          STATUS_PILL.innerHTML = `
-            <span class="w-2 h-2 rounded-full ${status === 'SERVED' ? 'bg-emerald-600' : status === 'READY' ? 'bg-sky-600' : status === 'PREPARING' ? 'bg-violet-600' : status === 'PICKED_UP' ? 'bg-blue-600' : 'bg-amber-500 animate-pulse'}"></span>
-            <span id="status-text">${STATUS_LABELS[status] || status}</span>
-          `;
-
-          // Update timeline
-          renderStatusTimeline(status);
-
-          // Update items
-          ORDER_ITEMS_EL.innerHTML = (order.items || []).map(i => `
-            <div class="flex justify-between items-center pb-2 border-b border-amber-50 last:border-0">
-              <span class="text-amber-700">${i.quantity}× ${i.name}</span>
-              <span class="font-medium text-amber-900">$${(i.price * i.quantity).toFixed(2)}</span>
-            </div>
-          `).join('');
-
-          // Update history
-          STATUS_HISTORY_EL.innerHTML = (order.statusHistory || []).map(h => `
-            <div class="flex justify-between items-center text-sm">
-              <span class="text-amber-600">${h.from || '—'} → ${h.to}</span>
-              <span class="text-xs text-amber-400">${h.actor || 'system'} • ${new Date(h.at).toLocaleTimeString()}</span>
-            </div>
-          `).join('');
-
-          // Stop polling when served
-          if (status === 'SERVED') {
-            clearInterval(POLL_TIMER);
-          }
-        }
-      } catch (_) {
-        // Silently fail on poll errors
-      }
+    function trackOrder(orderId, orderToken) {
+      sessionStorage.setItem('orderAccessToken', orderToken);
+      window.location.href = `order-status.html?orderId=${encodeURIComponent(orderId)}`;
     }
 
-    function startPolling(orderId, orderToken) {
-      pollOrderStatus(orderId, orderToken);
-      POLL_TIMER = setInterval(() => pollOrderStatus(orderId, orderToken), POLL_MS);
-    }
-
-    // Stop polling when page is unloaded
-    window.addEventListener('beforeunload', () => {
-      clearInterval(POLL_TIMER);
-    });
-
-    // Load on page load
     loadRecentOrders();
   </script>
 </body>
