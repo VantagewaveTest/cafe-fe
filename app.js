@@ -39,10 +39,13 @@ function initFloatingEstimate() {
 
   if (remainingMs <= 0) {
     timerBar.style.display = 'flex';
-    timerBar.className = 'fixed top-0 left-0 right-0 bg-amber-500 text-white px-4 py-3 text-center text-base font-bold shadow-lg z-50 flex items-center justify-center gap-3';
+    timerBar.className = 'fixed top-0 left-0 right-0 bg-amber-500 text-white px-4 py-3 text-center text-base font-bold shadow-lg z-50 flex items-center justify-between gap-3';
     timerBar.innerHTML = `
       <span>⏳ Order #${order.orderId} estimated prep time has elapsed. Status is determined by the kitchen.</span>
-      <a href="order-status.html?orderId=${encodeURIComponent(order.orderId)}" class="underline text-amber-100 hover:text-white text-xs">Check Status</a>
+      <div class="flex items-center gap-2">
+        <a href="order-status.html?orderId=${encodeURIComponent(order.orderId)}" class="underline text-amber-100 hover:text-white text-xs">Check Status</a>
+        <button onclick="clearActiveOrder(); timerBar.style.display='none';" class="bg-white/20 hover:bg-white/30 text-white text-xs px-2 py-1 rounded transition">Close</button>
+      </div>
     `;
     return;
   }
@@ -55,7 +58,10 @@ function initFloatingEstimate() {
 
   timerBar.innerHTML = `
     <span>⏳ Active Order #${order.orderId} Estimate Remaining: <strong>${timeStr}</strong> (estimate only)</span>
-    <a href="order-status.html?orderId=${encodeURIComponent(order.orderId)}" class="underline text-amber-200 hover:text-white text-xs">Track Order</a>
+    <div class="flex items-center gap-2">
+      <a href="order-status.html?orderId=${encodeURIComponent(order.orderId)}" class="underline text-amber-200 hover:text-white text-xs">Track Order</a>
+      <button onclick="clearActiveOrder(); timerBar.style.display='none';" class="bg-white/20 hover:bg-white/30 text-white text-xs px-2 py-1 rounded transition">Close</button>
+    </div>
   `;
 }
 
