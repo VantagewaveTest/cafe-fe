@@ -283,23 +283,17 @@
           localStorage.removeItem('cafe_cart');
           cart = {};
 
-          status.textContent = `✅ Payment simulated! Order #${data.body.orderId} placed. Track your order below.`;
+          status.textContent = `✅ Payment simulated! Order #${data.body.orderId} placed successfully.`;
           status.classList.remove('hidden');
-          status.classList.add('text-green-600');
+          status.classList.add('text-green-600', 'font-bold', 'animate-bounce');
 
-          // Show order confirmation and redirect to tracker
-          btn.textContent = 'Go to Order Tracker';
+          // Redirect to My Orders page for tracking
+          btn.textContent = 'Go to My Orders';
           btn.disabled = false;
           btn.classList.remove('opacity-50', 'cursor-not-allowed');
           btn.onclick = () => {
-            window.location.href = `order-status.html?orderId=${encodeURIComponent(data.body.orderId)}`;
+            window.location.href = 'my-orders.html';
           };
-
-          // Show tracking section
-          document.getElementById('tracking-section').classList.remove('hidden');
-          document.getElementById('tracking-order-id').textContent = data.body.orderId;
-          document.getElementById('tracking-token').textContent = data.body.orderAccessToken;
-          document.getElementById('tracking-link').href = `order-status.html?orderId=${encodeURIComponent(data.body.orderId)}`;
         } else {
           status.textContent = 'Failed to place order: ' + (data.body.message || 'unknown error');
           status.classList.remove('hidden');
