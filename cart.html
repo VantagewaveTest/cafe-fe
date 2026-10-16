@@ -31,16 +31,13 @@
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <!-- Cart Items -->
       <div id="cart-items-container" class="md:col-span-2 space-y-4">
-        <div class="bg-white rounded-2xl p-8 text-center shadow-md border border-amber-200">
-          <div class="text-5xl mb-3">🛒</div>
-          <h3 class="text-xl font-bold text-amber-900 mb-2">Your cart is empty</h3>
-          <p class="text-amber-700 text-sm mb-6">Looks like you haven't added any treats yet.</p>
-          <a href="menu.html" class="bg-amber-800 hover:bg-amber-900 text-white px-6 py-3 rounded-lg font-medium inline-block shadow transition">Browse Menu</a>
-        </div>
+        <!-- Cart items rendered here -->
       </div>
 
-      <div class="bg-white rounded-2xl p-6 shadow-md border border-amber-200 h-fit space-y-6">
+      <!-- Checkout -->
+      <div class="bg-white rounded-2xl p-6 shadow-md border border-amber-200 h-fit">
         <h2 class="text-lg font-bold text-amber-900 mb-4 pb-2 border-b border-amber-100">Order Summary</h2>
 
         <div class="space-y-3 text-sm text-amber-800 mb-6">
@@ -62,6 +59,7 @@
           </div>
         </div>
 
+        <!-- Table or Counter -->
         <div class="space-y-3">
           <label class="block text-xs font-bold text-amber-900 uppercase tracking-wide mb-2">Table or Counter Pickup</div>
           <div class="space-y-2 text-sm text-amber-800">
@@ -77,6 +75,7 @@
           <input id="tableInput" type="number" min="1" max="20" placeholder="Table no. e.g. 6" class="w-full border border-amber-300 rounded-lg px-3 py-2 text-sm bg-amber-50 focus:ring-2 focus:ring-amber-500 outline-none" />
         </div>
 
+        <!-- Payment Method -->
         <div class="space-y-3">
           <label class="block text-xs font-bold text-amber-900 uppercase tracking-wide mb-2">Payment Option (Simulated)</label>
           <p class="text-xs text-amber-600">No real charge — this is a demonstration only.</p>
@@ -96,8 +95,9 @@
           </div>
         </div>
 
-        <button id="checkout-btn" onclick="placeOrder()" class="w-full bg-amber-800 hover:bg-amber-900 text-white py-3.5 rounded-xl font-semibold shadow-lg transition flex items-center justify-center gap-2">
-          Pay & Place Order
+        <!-- Checkout Button -->
+        <button id="checkout-btn" onclick="placeOrder()" class="w-full bg-amber-800 hover:bg-amber-900 text-white py-3 rounded-lg font-semibold shadow-lg transition flex items-center justify-center gap-2">
+          Pay &amp; Place Order
         </button>
         <p id="checkout-status" class="text-xs text-center text-amber-600 hidden"></p>
       </div>
@@ -112,7 +112,7 @@
   <script src="api.js"></script>
   <script src="app.js"></script>
   <script>
-    let cart = JSON.parse(localStorage.getItem('cafe_cart')) || {};
+    let cart = JSON.parse(localStorage.getItem('cafe_cart') || '{}');
 
     function renderCart() {
       const container = document.getElementById('cart-items-container');
@@ -211,7 +211,7 @@
       const tableInput = document.getElementById('tableInput').value.trim();
       const payment = document.querySelector('input[name="payment"]:checked').value;
 
-      // Validate table number when Table option selected
+      // Validate table number when Table option is selected
       if (orderType === 'table' && !tableInput) {
         const status = document.getElementById('checkout-status');
         status.textContent = '❌ Please enter a table number before placing order.';
@@ -251,7 +251,7 @@
         if (data.ok && data.body.success) {
           const endTime = Date.now() + (data.body.totalPrepTime * 1000);
 
-          // Store active order in localStorage
+          // Set active order in localStorage (estimate only — backend status is truth)
           setActiveOrder({
             orderId: data.body.orderId,
             orderAccessToken: data.body.orderAccessToken,
@@ -288,6 +288,7 @@
           status.classList.remove('hidden');
           status.classList.add('text-green-600', 'font-bold', 'animate-bounce');
 
+          // Redirect to My Orders after 2 seconds
           btn.textContent = 'Redirecting to My Orders...';
           btn.disabled = true;
           btn.classList.add('opacity-50', 'cursor-not-allowed');

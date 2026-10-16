@@ -60,6 +60,13 @@
       PICKED_UP: 'bg-blue-100 text-blue-900',
       SERVED: 'bg-emerald-100 text-emerald-900'
     };
+    const STATUS_BADGE_COLORS = {
+      PENDING: 'bg-amber-500',
+      PREPARING: 'bg-violet-500',
+      READY: 'bg-sky-500',
+      PICKED_UP: 'bg-blue-500',
+      SERVED: 'bg-emerald-500'
+    };
 
     let POLL_TIMER = null;
 
@@ -75,9 +82,19 @@
       return '🍽️';
     }
 
+    function getStatusIcon(status) {
+      switch(status) {
+        case 'PENDING': return '📝';
+        case 'PREPARING': return '👨‍🍳';
+        case 'READY': return '🍽️';
+        case 'PICKED_UP': return '🚚';
+        case 'SERVED': return '✅';
+        default: return '•';
+      }
+    }
+
     function loadOrders() {
       const allOrders = JSON.parse(localStorage.getItem('all_orders') || '[]');
-      console.log('Loaded orders:', allOrders);
       const container = document.getElementById('orders-container');
       const emptyState = document.getElementById('empty-state');
 
@@ -126,14 +143,16 @@
           <!-- Status Header -->
           <div class="flex justify-between items-start mb-6 pb-6 border-b border-amber-200">
             <div>
-              <h2 class="text-2xl font-bold text-amber-900 mb-2">Order #${order.orderId}</div>
-              <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full font-bold text-sm shadow-sm ${statusColorClass(status)}">
-                <span class="w-2.5 h-2.5 rounded-full ${badgeColorClass(status)} animate-pulse"></span>
-                <span id="status-text-${order.orderId}" class="font-bold text-sm">${STATUS_LABELS[status] || status}</span>
+              <div class="flex items-center gap-2">
+                <div class="font-bold text-amber-900 text-lg">Order #${order.orderId}</div>
+                <span id="status-pill-${order.orderId}" class="inline-flex items-center gap-2 px-4 py-2 rounded-full font-bold text-sm shadow-sm ${statusColorClass(status)}">
+                  <span class="w-2.5 h-2.5 rounded-full ${badgeColorClass(status)} animate-pulse"></span>
+                  <span id="status-text-${order.orderId}" class="font-bold text-sm">${STATUS_LABELS[status] || status}</span>
+                </div>
               </div>
-            </div>
-            <div class="text-right">
-              <div class="text-xs text-amber-500 font-mono">Token: <span class="text-amber-700 font-mono">${order.orderAccessToken ? order.orderAccessToken.substring(0, 12) + '...' : 'N/A'}</span></div>
+              <div class="text-right">
+                <div class="text-xs text-amber-500 font-mono">Token: <span class="text-amber-700 font-mono">${order.orderAccessToken ? order.orderAccessToken.substring(0, 12) + '...' : 'N/A'}</span></div>
+              </div>
             </div>
           </div>
 
@@ -151,8 +170,8 @@
             <div id="order-items-${order.orderId}" class="space-y-2">
               ${(order.items || []).map(item => `
                 <div class="flex justify-between items-center py-2 border-b border-amber-50 last:border-0">
-                  <div class="flex items-center gap-3">
-                    <div class="text-sm font-bold text-amber-900">${getItemEmoji(i.name)} ${i.quantity}× ${i.name}</div>
+                  <div class="flex flex-col">
+                    <div class="text-sm font-bold text-amber-700">${getItemEmoji(i.name)} ${i.quantity}× ${i.name}</div>
                     <div class="text-xs text-amber-500">${i.category || ''}</div>
                   </div>
                   <span class="font-medium text-amber-900">$${(i.price * i.quantity).toFixed(2)}</span>
@@ -217,12 +236,19 @@
         try {
           const res = await CafeApi.get(`/api/orders/${order.orderId}`);
           if (res.ok && res.body.success) {
-            const newStatus = res.body.order.status;
+            const dataOrder = res.body.order;
+            const newStatus = dataOrder.status;
             const currentStatus = order.status;
 
             if (newStatus !== currentStatus) {
               order.status = newStatus;
-              order.statusHistory = res.body.order.statusHistory || order.statusHistory;
+              order.statusHistory = dataOrder.statusHistory || order.statusHistory;
+              order.items = res.body.order.items || order.items;
+              order.totalAmount = res.body.order.totalAmount;
+              order.tableNumber = res.body.order.tableNumber;
+              order.pickedUpAt = res.body.order.pickedUpAt;
+              order.readyAt = res.body.order.readyAt;
+              order.expectedDeliveredAt = res.body.order.expectedDeliveredAt;
               localStorage.setItem('all_orders', JSON.stringify(allOrders));
               updateOrderCard(order.orderId, newStatus);
             }
@@ -234,10 +260,12 @@
     }
 
     function updateOrderCard(orderId, newStatus) {
-      const card = document.getElementById(`order-${orderId}`);
+      const orderCard = document.getElementById(`order-${orderId}`);
       if (!card) return;
 
-      const statusPill = card.querySelector('#status-pill');
+      const statusPill = document.getElementById(`status-pill-${orderId}`);
+      const statusText = document.getElementById(`status-text-${orderId}`);
+
       const statusColors = {
         PENDING: 'bg-amber-100 text-amber-900',
         PREPARING: 'bg-violet-100 text-violet-900',
