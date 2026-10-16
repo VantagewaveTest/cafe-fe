@@ -110,6 +110,18 @@
       document.getElementById('stat-ready').textContent = counts.ready;
       document.getElementById('stat-picked-up').textContent = counts.pickedUp;
 
+      function getItemEmoji(name) {
+        const nameLower = name.toLowerCase();
+        if (nameLower.includes('coffee') || nameLower.includes('espresso') || nameLower.includes('macchiato') || nameLower.includes('cold brew') || nameLower.includes('cappuccino') || nameLower.includes('americano') || nameLower.includes('mocha') || nameLower.includes('ristretto')) return '☕';
+        if (nameLower.includes('tea') || nameLower.includes('chai') || nameLower.includes('green tea')) return '🍵';
+        if (nameLower.includes('waffle')) return '🧇';
+        if (nameLower.includes('cake') || nameLower.includes('velvet') || nameLower.includes('cheesecake') || nameLower.includes('lava')) return '🍰';
+        if (nameLower.includes('croissant') || nameLower.includes('cookie') || nameLower.includes('biscotti') || nameLower.includes('tart')) return '🥐';
+        if (nameLower.includes('sandwich') || nameLower.includes('wrap')) return '🥪';
+        if (nameLower.includes('juice') || nameLower.includes('tea') || nameLower.includes('drink')) return '🥤';
+        return '🍽️';
+      }
+
       // Render preparing queue
       const prepEl = document.getElementById('preparing-queue');
       if (preparing.length === 0) {
@@ -119,7 +131,7 @@
           <div class="bg-amber-50 rounded-xl p-4 border border-amber-200 flex justify-between items-center">
             <div>
               <div class="font-bold text-amber-900">${order.orderId}</div>
-              <div class="text-xs text-amber-600">${order.tableNumber || 'Counter'} • ${order.items.map(i => i.quantity + '× ' + i.name).join(', ')}</div>
+              <div class="text-xs text-amber-600">${order.tableNumber || 'Counter'} • ${order.items.map(i => getItemEmoji(i.name) + ' ' + i.quantity + '× ' + i.name).join(', ')}</div>
               <div class="text-xs text-amber-500">Started ${new Date(order.preparingAt || order.createdAt).toLocaleTimeString()}</div>
             </div>
           </div>
@@ -135,7 +147,7 @@
           <div class="bg-blue-50 rounded-xl p-4 border border-blue-200 flex justify-between items-center">
             <div>
               <div class="font-bold text-amber-900">${order.orderId}</div>
-              <div class="text-xs text-amber-600">${order.tableNumber || 'Counter'} • ${order.items.map(i => i.quantity + '× ' + i.name).join(', ')}</div>
+              <div class="text-xs text-amber-600">${order.tableNumber || 'Counter'} • ${order.items.map(i => getItemEmoji(i.name) + ' ' + i.quantity + '× ' + i.name).join(', ')}</div>
               <div class="text-xs text-amber-500">Ready ${new Date(order.readyAt).toLocaleTimeString()}</div>
             </div>
             <div class="flex gap-2">
@@ -154,7 +166,7 @@
           <div class="bg-emerald-50 rounded-xl p-4 border border-emerald-200 flex justify-between items-center">
             <div>
               <div class="font-bold text-amber-900">${order.orderId}</div>
-              <div class="text-xs text-amber-600">${order.tableNumber || 'Counter'} • ${order.items.map(i => i.quantity + '× ' + i.name).join(', ')}</div>
+              <div class="text-xs text-amber-600">${order.tableNumber || 'Counter'} • ${order.items.map(i => getItemEmoji(i.name) + ' ' + i.quantity + '× ' + i.name).join(', ')}</div>
               <div class="text-xs text-amber-500">Picked up ${new Date(order.pickedUpAt).toLocaleTimeString()}</div>
             </div>
             <div class="flex gap-2">

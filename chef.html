@@ -114,6 +114,18 @@
       const pendingEl = document.getElementById('pending-queue');
       const emptyEl = document.getElementById('queue-empty');
 
+      function getItemEmoji(name) {
+        const nameLower = name.toLowerCase();
+        if (nameLower.includes('coffee') || nameLower.includes('espresso') || nameLower.includes('macchiato') || nameLower.includes('cold brew') || nameLower.includes('cappuccino') || nameLower.includes('americano') || nameLower.includes('mocha') || nameLower.includes('ristretto')) return '☕';
+        if (nameLower.includes('tea') || nameLower.includes('chai') || nameLower.includes('green tea')) return '🍵';
+        if (nameLower.includes('waffle')) return '🧇';
+        if (nameLower.includes('cake') || nameLower.includes('velvet') || nameLower.includes('cheesecake') || nameLower.includes('lava')) return '🍰';
+        if (nameLower.includes('croissant') || nameLower.includes('cookie') || nameLower.includes('biscotti') || nameLower.includes('tart')) return '🥐';
+        if (nameLower.includes('sandwich') || nameLower.includes('wrap')) return '🥪';
+        if (nameLower.includes('juice') || nameLower.includes('tea') || nameLower.includes('drink')) return '🥤';
+        return '🍽️';
+      }
+
       if (queue.length === 0) {
         pendingEl.innerHTML = '';
         emptyEl.classList.remove('hidden');
@@ -123,7 +135,7 @@
           <div class="bg-amber-50 rounded-xl p-4 border border-amber-200 flex justify-between items-center">
             <div>
               <div class="font-bold text-amber-900">${order.orderId}</div>
-              <div class="text-xs text-amber-600">${order.tableNumber || 'Counter'} • ${order.items.map(i => i.quantity + '× ' + i.name).join(', ')}</div>
+              <div class="text-xs text-amber-600">${order.tableNumber || 'Counter'} • ${order.items.map(i => getItemEmoji(i.name) + ' ' + i.quantity + '× ' + i.name).join(', ')}</div>
               <div class="text-xs text-amber-500">Placed ${new Date(order.createdAt).toLocaleTimeString()}</div>
             </div>
             <button onclick="startPrep('${order.orderId}')" class="bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">
@@ -142,7 +154,7 @@
           <div class="bg-blue-50 rounded-xl p-4 border border-blue-200 flex justify-between items-center">
             <div>
               <div class="font-bold text-amber-900">${order.orderId}</div>
-              <div class="text-xs text-amber-600">${order.items.map(i => i.quantity + '× ' + i.name).join(', ')}</div>
+              <div class="text-xs text-amber-600">${order.items.map(i => getItemEmoji(i.name) + ' ' + i.quantity + '× ' + i.name).join(', ')}</div>
             </div>
             <button onclick="markReady('${order.orderId}')" class="bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">
               Mark Ready
