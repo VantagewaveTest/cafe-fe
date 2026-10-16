@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Tracker — The Daily Grind Café</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-amber-50 min-h-screen flex flex-col font-sans">
+
+  <!-- Header -->
+  <header class="bg-amber-900 text-amber-100 shadow-md py-4 px-6 flex justify-between items-center sticky top-0 z-30">
+    <div class="flex items-center gap-3">
+      <a href="index.html" class="text-sm text-amber-200 hover:text-amber-100 transition">← Back</a>
+      <div class="text-xl font-bold">Order Tracker</div>
+    </div>
+    <div class="text-xs text-amber-200 bg-amber-800 px-2 py-1 rounded-full">
+      Real-time updates (every 3s)
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-grow max-w-2xl w-full mx-auto px-4 py-8">
+    <div id="loading-state" class="text-center py-12">
+      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-900 mx-auto mb-4"></div>
+      <p class="text-amber-700 font-medium">Loading your order...</p>
+    </div>
+
+    <div id="order-content" class="hidden space-y-6">
+      <!-- Status Header -->
+      <div class="bg-white rounded-2xl p-6 border border-amber-200 text-center">
+        <h2 class="text-lg font-bold text-amber-900 mb-2">Order #<span id="display-order-id"></span></h2>
+        <div id="status-pill" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-100 text-amber-900 font-bold text-sm mb-4">
+          <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+          <span id="status-text">Loading...</span>
+        </div>
+        <div id="status-timeline" class="flex items-center justify-between text-xs text-amber-500 mt-4">
+          <!-- Timeline steps -->
+        </div>
+      </div>
+
+      <!-- Order Details -->
+      <div class="bg-white rounded-2xl p-6 border border-amber-200">
+        <h3 class="text-sm font-bold text-amber-700 uppercase tracking-wide mb-3">Order Items</h3>
+        <div id="order-items" class="space-y-2 text-sm text-amber-800">
+          <!-- Items rendered here -->
+        </div>
+        <div class="mt-4 pt-4 border-t border-amber-100">
+          <div class="flex justify-between text-sm mb-1">
+            <span class="text-amber-600">Table / Counter:</span>
+            <span id="display-table" class="font-medium text-amber-900">-</span>
+          </div>
+          <div class="flex justify-between text-sm mb-1">
+            <span class="text-amber-600">Total:</span>
+            <span id="display-total" class="font-bold text-amber-900">-</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Status History -->
+      <div class="bg-white rounded-2xl p-6 border border-amber-200">
+        <h3 class="text-sm font-bold text-amber-700 uppercase tracking-wide mb-3">Status History</h3>
+        <div id="status-history" class="space-y-3">
+          <!-- History rendered here -->
+        </div>
+      </div>
+
+      <!-- Estimate Notice -->
+      <div class="bg-amber-50 border border-amber-200 rounded-xl p-4">
+        <p class="text-sm text-amber-700">
+          <strong>Note:</strong> The countdown below is an <strong>estimate only</strong>. It does not mark your order as READY — the kitchen confirms readiness through the system.
+        </p>
+      </div>
+    </div>
+
+    <div id="error-state" class="hidden text-center py-12">
+      <div class="bg-amber-100 border border-amber-200 rounded-xl p-6 inline-block">
+        <h3 class="text-amber-900 font-bold mb-2">Unable to Load Order</h3>
+        <p id="error-message" class="text-amber-700 text-sm mb-4"></p>
+        <button onclick="location.reload()" class="bg-amber-800 hover:bg-amber-900 text-white px-4 py-2 rounded-lg text-sm">Retry</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-amber-950 text-amber-300/60 py-4 text-center text-xs">
+    &copy; 2026 The Daily Grind Café. Freshly brewed with love.
+  </footer>
+
+  <script src="config.js"></script>
+  <script src="api.js"></script>
+  <script src="app.js"></script>
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const orderId = urlParams.get('orderId');
+
+    const loadingEl = document.getElementById('loading-state');
+    const contentEl = document.getElementById('order-content');
+    const errorEl = document.getElementById('error-state');
+    const errorMsgEl = document.getElementById('error-message');
+
+    const statusPill = document.getElementById('status-pill');
+    const statusText = document.getElementById('status-text');
+    const statusTimeline = document.getElementById('status-timeline');
+    const orderItemsEl = document.getElementById('order-items');
+    const displayOrderId = document.getElementById('display-order-id');
+    const displayTable = document.getElementById('display-table');
+    const displayTotal = document.getElementById('display-total');
+    const statusHistoryEl = document.getElementById('status-history');
+
+    const STATUS_ORDER_LIST = ['PENDING', 'PREPARING', 'READY', 'PICKED_UP', 'SERVED'];
+    const STATUS_LABELS = {
+      PENDING: 'Placed',
+      PREPARING: 'Preparing',
+      READY: 'Ready',
+      PICKED_UP: 'Picked Up',
+      SERVED: 'Served'
+    };
+
+    function renderStatusTimeline(currentStatus) {
+      const currentIndex = STATUS_ORDER_LIST.indexOf(currentStatus);
+      let html = '';
+      STATUS_ORDER_LIST.forEach((status, idx) => {
+        const completed = idx < currentIndex;
+        const active = idx === currentIndex;
+        const upcoming = idx > currentIndex;
+        const circleClass = completed
+          ? 'bg-emerald-600' : active ? 'bg-amber-600 animate-pulse' : 'bg-amber-200';
+        const lineClass = completed ? 'bg-emerald-600' : 'bg-amber-200';
+        const labelClass = completed ? 'text-emerald-600 font-semibold' : active ? 'text-amber-900 font-semibold' : 'text-amber-400';
+
+        if (idx > 0) {
+          html += `<div class="flex-1 h-0.5 ${lineClass} mx-2"></div>`;
+        }
+        html += `
+          <div class="flex flex-col items-center">
+            <div class="${circleClass} w-3 h-3 rounded-full mx-auto mb-1"></div>
+            <span class="text-[10px] ${labelClass}">${STATUS_LABELS[status]}</span>
+          </div>
+        `;
+      });
+      statusTimeline.innerHTML = html;
+    }
+
+    async function fetchOrder() {
+      if (!orderId) {
+        showError('No order ID provided.');
+        return;
+      }
+
+      try {
+        const res = await CafeApi.get(`/api/orders/${orderId}`);
+
+        if (res.status === 401) {
+          showError('Invalid or missing tracking token. Please use the tracking link from your order confirmation.');
+          return;
+        }
+
+        if (res.status === 404) {
+          showError('Order not found.');
+          return;
+        }
+
+        if (!res.ok) {
+          showError('Failed to load order. Please try again.');
+          return;
+        }
+
+        const order = res.body.order;
+        displayOrder(order);
+      } catch (err) {
+        showError('Network error. Make sure cafe-be is running on port 5000.');
+      }
+    }
+
+    function displayError(msg) {
+      loadingEl.classList.add('hidden');
+      contentEl.classList.add('hidden');
+      errorEl.classList.remove('hidden');
+      errorMsgEl.textContent = msg;
+    }
+
+    function displayOrder(order) {
+      loadingEl.classList.add('hidden');
+      errorEl.classList.add('hidden');
+      contentEl.classList.remove('hidden');
+
+      displayOrderId.textContent = order.orderId;
+      displayTable.textContent = order.tableNumber || '-';
+      displayTotal.textContent = `$${order.totalAmount ? order.totalAmount.toFixed(2) : '-'}`;
+
+      // Status pill
+      const status = order.status;
+      const statusColors = {
+        PENDING: 'bg-amber-100 text-amber-900',
+        PREPARING: 'bg-violet-100 text-violet-900',
+        READY: 'bg-sky-100 text-sky-900',
+        PICKED_UP: 'bg-blue-100 text-blue-900',
+        SERVED: 'bg-emerald-100 text-emerald-900'
+      };
+      statusPill.className = `inline-flex items-center gap-2 px-4 py-2 rounded-full font-bold text-sm mb-4 ${statusColors[status] || 'bg-amber-100 text-amber-900'}`;
+      statusPill.innerHTML = `
+        <span class="w-2 h-2 rounded-full ${
+          status === 'SERVED' ? 'bg-emerald-600' :
+          status === 'READY' ? 'bg-sky-600' :
+          status === 'PREPARING' ? 'bg-violet-600' :
+          status === 'PICKED_UP' ? 'bg-blue-600' : 'bg-amber-500 animate-pulse'
+        }"></span>
+        <span id="status-text">${STATUS_LABELS[status] || status}</span>
+      `;
+
+      // Timeline
+      renderStatusTimeline(status);
+
+      // Items
+      orderItemsEl.innerHTML = (order.items || []).map(i => `
+        <div class="flex justify-between items-center pb-2 border-b border-amber-50 last:border-0">
+          <span class="text-amber-700">${i.quantity}× ${i.name}</span>
+          <span class="font-medium text-amber-900">$${(i.price * i.quantity).toFixed(2)}</span>
+        </div>
+      `).join('');
+
+      // History
+      statusHistoryEl.innerHTML = (order.statusHistory || []).map(h => `
+        <div class="flex justify-between items-center text-sm">
+          <span class="text-amber-600">${h.from || '—'} → ${h.to}</span>
+          <span class="text-xs text-amber-400">${h.actor || 'system'} • ${new Date(h.at).toLocaleTimeString()}</span>
+        </div>
+      `).join('');
+    }
+
+    // Initial fetch
+    fetchOrder();
+
+    // Poll every POLL_MS
+    setInterval(fetchOrder, POLL_MS);
+
+    // Refresh on visibility change
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) fetchOrder();
+    });
+  </script>
+</body>
+</html>

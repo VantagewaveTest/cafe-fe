@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Staff Login — The Daily Grind Café</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-amber-50 min-h-screen flex flex-col justify-between font-sans">
+
+  <!-- Header -->
+  <header class="bg-amber-900 text-amber-100 shadow-md py-4 px-6 flex justify-between items-center">
+    <div class="text-xl font-bold tracking-wider flex items-center gap-2">
+      <span>☕</span> The Daily Grind Café
+    </div>
+    <nav class="space-x-6 text-sm font-medium">
+      <a href="index.html" class="hover:text-amber-300 transition">← Back to Home</a>
+    </nav>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-grow flex items-center justify-center px-4 py-12">
+    <div class="max-w-md w-full bg-white rounded-2xl shadow-xl border border-amber-200 p-8 md:p-12">
+      <div class="text-center mb-8">
+        <h1 class="text-2xl font-bold text-amber-900 mb-2">Staff Login</h1>
+        <p class="text-amber-600 text-sm">Sign in to access Chef or Waiter dashboard.</p>
+      </div>
+
+      <form id="login-form" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-amber-900 uppercase tracking-wide mb-1">Username</label>
+          <input type="text" id="username" required class="w-full border border-amber-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 outline-none" placeholder="e.g. chef01" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-amber-900 uppercase tracking-wide mb-1">Password</label>
+          <input type="password" id="password" required class="w-full border border-amber-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 outline-none" placeholder="••••••••" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-amber-900 uppercase tracking-wide mb-1">Role</label>
+          <select id="role" class="w-full border border-amber-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 outline-none">
+            <option value="CHEF">Chef</option>
+            <option value="WAITER">Waiter</option>
+          </select>
+        </div>
+        <button type="submit" id="login-btn" class="w-full bg-amber-800 hover:bg-amber-900 text-white py-3 rounded-xl font-semibold shadow-lg transition">Sign In</button>
+        <p id="login-error" class="text-red-600 text-sm hidden text-center"></p>
+        <p class="text-xs text-amber-500 text-center mt-4">Demo: chef01 / chef01 or waiter01 / waiter01</p>
+      </form>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-amber-950 text-amber-300/60 py-4 text-center text-xs">
+    &copy; 2026 The Daily Grind Café. Freshly brewed with love.
+  </footer>
+
+  <script src="config.js"></script>
+  <script src="api.js"></script>
+  <script>
+    const form = document.getElementById('login-form');
+    const btn = document.getElementById('login-btn');
+    const error = document.getElementById('login-error');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      error.classList.add('hidden');
+      btn.disabled = true;
+      btn.textContent = 'Signing In...';
+
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value.trim();
+      const role = document.getElementById('role').value;
+
+      try {
+        const res = await CafeApi.post('/staff/login', { username, password, role });
+        if (res.ok && res.body.success) {
+          sessionStorage.setItem('staffToken', res.body.token);
+          sessionStorage.setItem('staffRole', res.body.role);
+          sessionStorage.setItem('staffUsername', res.body.username);
+
+          if (res.body.role === 'CHEF') {
+            window.location.href = 'chef.html';
+          } else if (res.body.role === 'WAITER') {
+            window.location.href = 'waiter.html';
+          }
+        } else {
+          error.textContent = res.body.message || 'Login failed.';
+          error.classList.remove('hidden');
+          btn.disabled = false;
+          btn.textContent = 'Sign In';
+        }
+      } catch (err) {
+        error.textContent = 'Network error. Make sure cafe-be is running on port 5000.';
+        error.classList.remove('hidden');
+        btn.disabled = false;
+        btn.textContent = 'Sign In';
+      }
+    });
+  </script>
+</body>
+</html>
