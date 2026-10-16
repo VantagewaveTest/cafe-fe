@@ -39,7 +39,19 @@
         Sign In
       </button>
 
-      <p class="text-xs text-amber-600 italic mt-4 text-center">Demo credentials: chef1 / chef-secret, waiter1 / waiter-secret</p>
+      <div class="mt-4">
+        <p class="text-xs text-amber-600 italic text-center mb-2">Demo credentials — tap to fill:</p>
+        <div class="flex gap-2">
+          <button type="button" onclick="fillDemo('chef')"
+            class="flex-1 bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-medium py-2 rounded-lg border border-amber-300 transition">
+            👨‍🍳 chef1 / chef-secret
+          </button>
+          <button type="button" onclick="fillDemo('waiter')"
+            class="flex-1 bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-medium py-2 rounded-lg border border-amber-300 transition">
+            🚶 waiter1 / waiter-secret
+          </button>
+        </div>
+      </div>
     </div>
   </main>
 
@@ -55,9 +67,19 @@
       el.classList.remove('hidden');
     }
 
+    function fillDemo(role) {
+      const creds = role === 'chef'
+        ? { u: 'chef1', p: 'chef-secret' }
+        : { u: 'waiter1', p: 'waiter-secret' };
+      document.getElementById('username').value = creds.u;
+      document.getElementById('password').value = creds.p;
+      document.getElementById('login-error').classList.add('hidden');
+      document.getElementById('login-btn').focus();
+    }
+
     async function login() {
       const username = document.getElementById('username').value.trim();
-      const password = document.getElementById('password').value;
+      const password = document.getElementById('password').value.trim();
       const btn = document.getElementById('login-btn');
       if (!username || !password) { showErr('Enter username and password.'); return; }
 
