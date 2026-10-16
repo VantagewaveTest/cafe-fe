@@ -15,7 +15,12 @@
       if (staffToken && opts.sendAuth !== false) {
         opts.headers['Authorization'] = `Bearer ${staffToken}`;
       }
-      const res = await fetch(`${BASE}${path}`, opts);
+      // Normalize path: avoid double /api/ when BASE already ends with /api
+      let normalizedPath = path;
+      if (BASE.endsWith('/api') && path.startsWith('/api/')) {
+        normalizedPath = path.slice(4); // remove '/api' prefix
+      }
+      const res = await fetch(`${BASE}${normalizedPath}`, opts);
       let json;
       try { json = await res.json(); } catch (_) { json = {}; }
       return { ok: res.ok, status: res.status, body: json };
