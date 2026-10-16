@@ -18,6 +18,7 @@
       <a href="menu.html" class="hover:text-amber-300 transition">Menu</a>
       <a href="cart.html" class="underline underline-offset-4">Cart</a>
       <a href="staff-login.html" class="hover:text-amber-300 transition">Staff Login</a>
+      <a href="my-orders.html" class="hover:text-amber-300 transition">My Orders</a>
     </nav>
   </header>
 
@@ -225,6 +226,17 @@
       const orderType = document.querySelector('input[name="orderType"]:checked').value;
       const tableInput = document.getElementById('tableInput').value.trim();
       const payment = document.querySelector('input[name="payment"]:checked').value;
+
+      // Table number is compulsory when Table option is selected
+      if (orderType === 'table' && !tableInput) {
+        status.textContent = '❌ Please enter a table number before placing order.';
+        status.classList.remove('hidden');
+        status.classList.add('text-red-600');
+        btn.textContent = 'Pay & Place Order';
+        btn.disabled = false;
+        document.getElementById('tableInput').focus();
+        return;
+      }
 
       let tableNumber = '';
       if (orderType === 'table' && tableInput) {
