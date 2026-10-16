@@ -17,6 +17,7 @@
       <a href="index.html" class="hover:text-amber-300 transition">Home</a>
       <a href="menu.html" class="hover:text-amber-300 transition">Menu</a>
       <a href="cart.html" class="hover:text-amber-300 transition">Cart</a>
+      <a href="track.html" class="hover:text-amber-300 transition">Track Order</a>
       <a href="staff.html" class="underline underline-offset-4">Staff</a>
     </nav>
   </header>
@@ -238,6 +239,7 @@
         queueDiv.innerHTML = allOrders.map(order => {
           const itemsList = order.items.map(i => `${i.quantity}x ${i.name}`).join(', ');
           const tableInfo = order.tableNumber ? `<span class="text-xs bg-amber-100 px-2 py-0.5 rounded">${order.tableNumber}</span>` : '';
+          const prepTime = order.totalPrepTime ? `<span class="text-xs text-amber-600">⏱️ ${order.totalPrepTime}s</span>` : '';
           const statusColor = {
             'PENDING': 'bg-yellow-100 text-yellow-800',
             'PREPARING': 'bg-blue-100 text-blue-800',
@@ -258,6 +260,7 @@
                   <span class="font-bold text-amber-900 text-sm">${order.orderId}</span>
                   <span class="px-2 py-0.5 rounded text-xs font-medium ${statusColor}">${order.status}</span>
                   ${tableInfo}
+                  ${prepTime}
                 </div>
                 <p class="text-xs text-amber-700">${itemsList}</p>
               </div>
