@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Daily Grind Café - Service (Waiter)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-amber-50 min-h-screen font-sans">
+
+  <header class="sticky top-0 z-40 bg-amber-900 px-4 py-4 text-amber-100 shadow-md sm:px-6">
+    <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <a href="index.html" class="text-lg font-bold tracking-wider">☕ The Daily Grind Café</a>
+        <span class="rounded-full bg-amber-700 px-3 py-1 text-xs font-bold uppercase tracking-wide">Service</span>
+      </div>
+      <nav class="flex flex-wrap items-center gap-4 text-sm font-medium">
+        <a href="menu.html" class="hover:text-amber-300 transition">Menu</a>
+        <a href="track.html" class="hover:text-amber-300 transition">Track Order</a>
+        <span id="user-badge" class="rounded-full border border-amber-600 px-3 py-1 text-xs"></span>
+        <button type="button" id="logout-btn" class="rounded-lg bg-amber-800 px-3 py-1.5 text-xs font-semibold hover:bg-amber-700">Sign out</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+    <div class="mb-6 flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-bold text-amber-900 sm:text-3xl">Service Board</h1>
+        <p class="text-sm text-amber-700/80">Pick up what the kitchen has finished, then serve it to the table or counter.</p>
+      </div>
+      <div class="flex flex-wrap items-center gap-3">
+        <span id="live-indicator" class="flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800">
+          <span class="h-2 w-2 animate-pulse rounded-full bg-emerald-500"></span> Live · 3s
+        </span>
+        <label class="text-xs font-semibold uppercase tracking-wide text-amber-900" for="history-date">History date</label>
+        <input id="history-date" type="date"
+          class="rounded-lg border border-amber-200 bg-white px-3 py-1.5 text-sm text-amber-900 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200">
+        <button type="button" id="refresh-btn"
+          class="rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-sm font-semibold text-amber-900 hover:bg-amber-50">Refresh</button>
+      </div>
+    </div>
+
+    <div id="alert-area" class="mb-4 hidden"></div>
+
+    <section class="mb-6" aria-label="Status counts">
+      <div id="counts" class="grid grid-cols-2 gap-3 sm:grid-cols-5"></div>
+    </section>
+
+    <section class="grid grid-cols-1 gap-6 lg:grid-cols-3" aria-label="Service tickets">
+      <div>
+        <h2 class="mb-3 flex items-center gap-2 text-lg font-bold text-amber-900">
+          <span>👨‍🍳</span> In the kitchen <span id="preparing-count" class="rounded-full bg-orange-600 px-2 py-0.5 text-xs text-white">0</span>
+        </h2>
+        <p class="mb-3 text-xs text-amber-700/70">Not ready yet — for your awareness only.</p>
+        <div id="preparing-list" class="space-y-3"></div>
+      </div>
+      <div>
+        <h2 class="mb-3 flex items-center gap-2 text-lg font-bold text-amber-900">
+          <span>🔔</span> Ready to pick up <span id="ready-count" class="rounded-full bg-emerald-600 px-2 py-0.5 text-xs text-white">0</span>
+        </h2>
+        <p class="mb-3 text-xs text-amber-700/70">Collect from the pass, then mark it picked up.</p>
+        <div id="ready-list" class="space-y-3"></div>
+      </div>
+      <div>
+        <h2 class="mb-3 flex items-center gap-2 text-lg font-bold text-amber-900">
+          <span>🛎️</span> On the way <span id="picked-count" class="rounded-full bg-sky-600 px-2 py-0.5 text-xs text-white">0</span>
+        </h2>
+        <p class="mb-3 text-xs text-amber-700/70">Picked up, not yet served.</p>
+        <div id="picked-list" class="space-y-3"></div>
+      </div>
+    </section>
+
+    <section class="mt-8" aria-label="Service history">
+      <h2 class="mb-3 text-lg font-bold text-amber-900">Served on <span id="history-date-label" class="font-mono text-base">—</span></h2>
+      <div class="overflow-x-auto rounded-2xl border border-amber-200 bg-white p-4 shadow-sm">
+        <table class="w-full min-w-[36rem] text-left text-sm">
+          <thead>
+            <tr class="border-b border-amber-200 text-xs uppercase tracking-wide text-amber-700/80">
+              <th class="py-2 pr-3">Order</th>
+              <th class="py-2 pr-3">Fulfilment</th>
+              <th class="py-2 pr-3">Items</th>
+              <th class="py-2 pr-3">Status</th>
+              <th class="py-2 pr-3 text-right">Total</th>
+              <th class="py-2 text-right">Served at</th>
+            </tr>
+          </thead>
+          <tbody id="history-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <p id="last-updated" class="mt-6 text-center text-xs text-amber-700/70">—</p>
+  </main>
+
+  <footer class="bg-amber-950 py-4 text-center text-xs text-amber-300/60">
+    &copy; 2026 The Daily Grind Café · Service dashboard
+  </footer>
+
+  <script src="api.js"></script>
+  <script src="ui.js"></script>
+  <script>
+    (function () {
+      'use strict';
+
+      // The role comes from the stored server session, never from the URL.
+      var session = Cafe.guardRole('WAITER');
+      if (!session) return;
+
+      document.getElementById('user-badge').textContent = '🛎️ ' + session.username;
+      document.getElementById('logout-btn').addEventListener('click', function () {
+        Cafe.api.logout().then(function () { location.replace('staff-login.html'); });
+      });
+
+      var alertArea = document.getElementById('alert-area');
+      var preparingList = document.getElementById('preparing-list');
+      var readyList = document.getElementById('ready-list');
+      var pickedList = document.getElementById('picked-list');
+      var historyBody = document.getElementById('history-body');
+      var countsBox = document.getElementById('counts');
+      var lastUpdated = document.getElementById('last-updated');
+      var dateInput = document.getElementById('history-date');
+      var historyDateLabel = document.getElementById('history-date-label');
+
+      dateInput.value = Cafe.todayKey();
+
+      var busyOrders = {};
+      var boardLoaded = false;
+      var tickCount = 0;
+
+      function showAlert(html) {
+        alertArea.className = 'mb-4';
+        alertArea.innerHTML = html;
+      }
+      function clearAlert() {
+        alertArea.className = 'mb-4 hidden';
+        alertArea.innerHTML = '';
+      }
+
+      /** Session gone -> back to sign in. Never fake data. */
+      function handleAuthError(err) {
+        if (err instanceof Cafe.ApiError && err.status === 401) {
+          Cafe.staff.clear();
+          location.replace('staff-login.html');
+          return true;
+        }
+        if (err instanceof Cafe.ApiError && err.status === 403) {
+          showAlert(UI.unauthorized('Your session does not have the WAITER role.'));
+          return true;
+        }
+        return false;
+      }
+
+      function renderSection(container, orders, emptyIcon, emptyTitle, emptyMessage, options) {
+        if (orders.length === 0) {
+          container.innerHTML = UI.empty(emptyIcon, emptyTitle, emptyMessage);
+          return;
+        }
+        container.innerHTML = orders.map(function (order) {
+          var busy = !!busyOrders[order.orderId];
+          var spec = { tone: options.tone };
+          if (options.action) {
+            spec.primary = {
+              label: busy ? options.busyLabel : options.action.label,
+              action: options.action.name,
+              disabled: busy
+            };
+          }
+          if (options.note) spec.note = options.note(order);
+          return UI.ticket(order, spec);
+        }).join('');
+      }
+
+      /* -------------------------- render -------------------------- */
+
+      function renderBoard(data) {
+        countsBox.innerHTML = UI.countsRow(data.counts);
+        document.getElementById('preparing-count').textContent = data.preparing.length;
+        document.getElementById('ready-count').textContent = data.ready.length;
+        document.getElementById('picked-count').textContent = data.pickedUp.length;
+
+        renderSection(preparingList, data.preparing, '🍳', 'Nothing in the kitchen', 'No orders are being prepared right now.', {
+          tone: 'border-orange-200',
+          note: function (order) { return 'Started ' + Cafe.timeSince(order.timestamps && order.timestamps.preparingAt); }
+        });
+
+        renderSection(readyList, data.ready, '🔔', 'Nothing ready yet', 'Finished tickets will appear here.', {
+          tone: 'border-emerald-300',
+          action: { name: 'pickup', label: 'Mark picked up' },
+          busyLabel: 'Saving…',
+          note: function (order) { return 'Ready ' + Cafe.timeSince(order.timestamps && order.timestamps.readyAt); }
+        });
+
+        renderSection(pickedList, data.pickedUp, '🛎️', 'Nothing on the way', 'Orders you pick up will wait here until served.', {
+          tone: 'border-sky-300',
+          action: { name: 'serve', label: 'Mark served' },
+          busyLabel: 'Saving…',
+          note: function (order) { return 'Picked up ' + Cafe.timeSince(order.timestamps && order.timestamps.pickedUpAt); }
+        });
+
+        lastUpdated.textContent = 'Last updated ' + new Date().toLocaleTimeString();
+      }
+
+      /** Service history needs the SERVED time, which UI.historyRow does not show. */
+      function serviceHistoryRow(order) {
+        return '<tr class="border-b border-amber-100 last:border-0">' +
+          '<td class="py-2 pr-3 font-mono text-xs text-amber-900">' + Cafe.escapeHtml(order.orderId) + '</td>' +
+          '<td class="py-2 pr-3">' + UI.fulfillmentShort(order.fulfilment) + '</td>' +
+          '<td class="py-2 pr-3 text-amber-800">' + Cafe.escapeHtml(UI.itemsSummary(order)) + '</td>' +
+          '<td class="py-2 pr-3">' + UI.statusBadge(order.status) + '</td>' +
+          '<td class="py-2 pr-3 text-right font-semibold text-amber-900">' + Cafe.money(order.total) + '</td>' +
+          '<td class="py-2 text-right text-amber-700/80">' + Cafe.escapeHtml(Cafe.formatClock(order.timestamps && order.timestamps.servedAt)) + '</td>' +
+          '</tr>';
+      }
+
+      function renderHistory() {
+        var date = dateInput.value || Cafe.todayKey();
+        historyDateLabel.textContent = date;
+
+        Cafe.api.serviceHistory(date)
+          .then(function (data) {
+            if (data.orders.length === 0) {
+              historyBody.innerHTML = '<tr><td colspan="6" class="py-6 text-center text-amber-700/70">No orders served on this date.</td></tr>';
+            } else {
+              historyBody.innerHTML = data.orders.map(serviceHistoryRow).join('');
+            }
+          })
+          .catch(function (err) {
+            if (handleAuthError(err)) return;
+            historyBody.innerHTML = '<tr><td colspan="6" class="py-6 text-center text-red-700">' +
+              Cafe.escapeHtml(err.friendly ? err.friendly() : 'Could not load history.') + '</td></tr>';
+          });
+      }
+
+      /* -------------------------- polling -------------------------- */
+
+      function loadBoard() {
+        return Cafe.api.serviceOrders()
+          .then(function (data) {
+            boardLoaded = true;
+            clearAlert();
+            renderBoard(data);
+          })
+          .catch(function (err) {
+            if (handleAuthError(err)) return;
+            // Keep the last known board on screen; surface the problem.
+            if (!boardLoaded) {
+              preparingList.innerHTML = UI.loading('Waiting for service…');
+              readyList.innerHTML = UI.loading('Waiting for service…');
+              pickedList.innerHTML = UI.loading('Waiting for service…');
+            }
+            showAlert(UI.errorBanner(err.friendly ? err.friendly() : 'Could not reach the service board.',
+              '<button type="button" id="retry-btn" class="rounded-lg border border-red-300 bg-white px-3 py-1.5 font-semibold">Retry</button>'));
+            var retry = document.getElementById('retry-btn');
+            if (retry) retry.addEventListener('click', function () { poller.poke(); });
+          });
+      }
+
+      var poller = Cafe.poll(function () {
+        tickCount += 1;
+        var tasks = [loadBoard()];
+        // History refreshes every ~12s (or on demand), not on every 3s tick.
+        if (tickCount === 1 || tickCount % 4 === 0) {
+          tasks.push(Promise.resolve().then(renderHistory));
+        }
+        return Promise.all(tasks);
+      }, { intervalMs: Cafe.POLL_INTERVAL_MS });
+
+      /* -------------------------- actions -------------------------- */
+
+      function runAction(orderId, action, button) {
+        busyOrders[orderId] = true;
+        if (button) { button.disabled = true; button.textContent = 'Saving…'; }
+
+        var call = action === 'pickup' ? Cafe.api.pickupOrder(orderId) : Cafe.api.serveOrder(orderId);
+
+        call
+          .then(function () {
+            delete busyOrders[orderId];
+            return poller.poke();
+          })
+          .then(function () {
+            tickCount = 0; // refresh history with the next tick
+            renderHistory();
+          })
+          .catch(function (err) {
+            delete busyOrders[orderId];
+            if (handleAuthError(err)) return;
+            if (err instanceof Cafe.ApiError && err.status === 409) {
+              // Someone else moved it first — just re-sync.
+              showAlert(UI.errorBanner('That ticket already moved on. The board has been refreshed.'));
+              poller.poke();
+              return;
+            }
+            showAlert(UI.errorBanner(err.friendly ? err.friendly() : 'That action failed.'));
+            poller.poke();
+          });
+      }
+
+      document.querySelector('main').addEventListener('click', function (event) {
+        var button = event.target.closest('button[data-action]');
+        if (!button) return;
+        if (button.disabled) return;
+        runAction(button.getAttribute('data-order-id'), button.getAttribute('data-action'), button);
+      });
+
+      document.getElementById('refresh-btn').addEventListener('click', function () {
+        poller.poke();
+        renderHistory();
+      });
+      dateInput.addEventListener('change', renderHistory);
+
+      /* -------------------------- start -------------------------- */
+
+      preparingList.innerHTML = UI.loading('Loading the service board…');
+      readyList.innerHTML = UI.loading('Loading the service board…');
+      pickedList.innerHTML = UI.loading('Loading the service board…');
+      poller.start();
+      renderHistory();
+
+      // Keep the "3m ago" labels fresh even between polls.
+      setInterval(function () {
+        if (document.querySelectorAll('[data-order-card]').length) poller.poke();
+      }, Cafe.POLL_INTERVAL_MS);
+    })();
+  </script>
+</body>
+</html>

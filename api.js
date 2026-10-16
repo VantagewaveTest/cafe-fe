@@ -83,22 +83,48 @@
    * Local storage: cart, active order, staff session
    * ---------------------------------------------------------------- */
 
-  function readJSON(key, fallback) {
+  /**
+   * Storage split (deliberate, see README):
+   *  - the staff session is per browser TAB (sessionStorage) so a chef and a
+   *    waiter can be signed in side by side on one machine without clobbering
+   *    each other — and the same holds for two staff on one terminal;
+   *  - the customer's cart and active order follow them across tabs
+   *    (localStorage).
+   */
+  function pickStore(name) {
     try {
-      var raw = global.localStorage.getItem(key);
+      var store = global[name];
+      store.setItem('__cafe_probe__', '1');
+      store.removeItem('__cafe_probe__');
+      return store;
+    } catch (e) {
+      return global.localStorage;
+    }
+  }
+
+  var staffStore = pickStore('sessionStorage');
+  var orderStore = pickStore('localStorage');
+
+  function readJSON(store, key, fallback) {
+    try {
+      var raw = store.getItem(key);
       return raw ? JSON.parse(raw) : fallback;
     } catch (e) {
       return fallback;
     }
   }
 
-  function writeJSON(key, value) {
-    try { global.localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* storage disabled */ }
+  function writeJSON(store, key, value) {
+    try { store.setItem(key, JSON.stringify(value)); } catch (e) { /* storage disabled */ }
+  }
+
+  function removeKey(store, key) {
+    try { store.removeItem(key); } catch (e) { /* noop */ }
   }
 
   var staff = {
     get: function () {
-      var session = readJSON(STORAGE_KEYS.staffSession, null);
+      var session = readJSON(staffStore, STORAGE_KEYS.staffSession, null);
       if (!session || !session.token) return null;
       if (session.expiresAt && new Date(session.expiresAt).getTime() <= Date.now()) {
         staff.clear();
@@ -106,20 +132,20 @@
       }
       return session;
     },
-    set: function (session) { writeJSON(STORAGE_KEYS.staffSession, session); },
-    clear: function () { try { global.localStorage.removeItem(STORAGE_KEYS.staffSession); } catch (e) { /* noop */ } },
+    set: function (session) { writeJSON(staffStore, STORAGE_KEYS.staffSession, session); },
+    clear: function () { removeKey(staffStore, STORAGE_KEYS.staffSession); },
     token: function () { var s = staff.get(); return s ? s.token : null; },
     role: function () { var s = staff.get(); return s ? s.role : null; }
   };
 
   var activeOrder = {
-    get: function () { return readJSON(STORAGE_KEYS.activeOrder, null); },
-    set: function (order) { writeJSON(STORAGE_KEYS.activeOrder, order); return order; },
+    get: function () { return readJSON(orderStore, STORAGE_KEYS.activeOrder, null); },
+    set: function (order) { writeJSON(orderStore, STORAGE_KEYS.activeOrder, order); return order; },
     patch: function (partial) {
       var next = Object.assign({}, activeOrder.get() || {}, partial);
       return activeOrder.set(next);
     },
-    clear: function () { try { global.localStorage.removeItem(STORAGE_KEYS.activeOrder); } catch (e) { /* noop */ } }
+    clear: function () { removeKey(orderStore, STORAGE_KEYS.activeOrder); }
   };
 
   /* ---------------------------------------------------------------- *

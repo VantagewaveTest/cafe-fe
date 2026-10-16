@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Daily Grind Café - Track Your Order</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-amber-50 min-h-screen flex flex-col justify-between font-sans pt-12">
+
+  <header class="bg-amber-900 text-amber-100 shadow-md py-4 px-6 flex justify-between items-center fixed top-0 left-0 right-0 z-40">
+    <a href="index.html" class="text-xl font-bold tracking-wider flex items-center gap-2">
+      <span>☕</span> The Daily Grind Café
+    </a>
+    <nav class="space-x-6 text-sm font-medium">
+      <a href="index.html" class="hover:text-amber-300 transition">Home</a>
+      <a href="menu.html" class="hover:text-amber-300 transition">Menu</a>
+      <a href="cart.html" class="hover:text-amber-300 transition">Cart</a>
+      <a href="track.html" class="underline underline-offset-4">Track Order</a>
+      <a href="staff-login.html" class="hover:text-amber-300 transition">Staff</a>
+    </nav>
+  </header>
+
+  <main class="flex-grow max-w-4xl w-full mx-auto px-4 py-8 mb-12">
+    <div id="track-root"></div>
+  </main>
+
+  <footer class="bg-amber-950 text-amber-300/60 py-4 text-center text-xs">
+    &copy; 2026 The Daily Grind Café · Status shown live from the café
+  </footer>
+
+  <script src="api.js"></script>
+  <script src="ui.js"></script>
+  <script src="app.js"></script>
+  <script>
+    (function () {
+      'use strict';
+
+      var root = document.getElementById('track-root');
+      var entry = Cafe.activeOrder.get();
+
+      // --- no active order on this device -------------------------------
+      if (!entry || !entry.orderId || !entry.trackingToken) {
+        root.innerHTML = UI.empty('🧾', 'No active order on this device',
+          'Place an order and its live status will appear here. Tracking is tied to this browser.',
+          '<a href="menu.html" class="bg-amber-800 hover:bg-amber-900 text-white px-6 py-3 rounded-xl font-medium inline-block shadow transition">Browse the menu</a>');
+        return;
+      }
+
+      var order = null;        // last server view we successfully fetched
+      var authorized = true;   // flips false on 401/403/404
+      var lastError = null;
+
+      function estimateHtml() {
+        if (!order) return '';
+        var ready = Cafe.isAtLeast(order.status, 'READY');
+        if (ready) {
+          return '<div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">' +
+            '<p class="font-semibold">🎉 Your order is ready — please collect it from the counter.</p></div>';
+        }
+        return '<div class="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">' +
+          '<p class="font-semibold">Estimated ready in <span id="estimate-clock" class="font-mono">--:--</span></p>' +
+          '<p class="mt-1 text-xs text-amber-700/80">This is an estimate only. Your real status below is updated live from the café' +
+          ' and keeps showing until the kitchen has actually finished.</p></div>';
+      }
+
+      function timelineHtml() {
+        var stamps = order.timestamps || {};
+        var rows = [
+          { code: 'PENDING', label: 'Order received', at: stamps.createdAt },
+          { code: 'PREPARING', label: 'Kitchen started preparing', at: stamps.preparingAt },
+          { code: 'READY', label: 'Ready for pickup', at: stamps.readyAt },
+          { code: 'PICKED_UP', label: 'Picked up by our team', at: stamps.pickedUpAt },
+          { code: 'SERVED', label: 'Served', at: stamps.servedAt }
+        ];
+        return '<ol class="space-y-2 text-sm">' + rows.map(function (row) {
+          var meta = Cafe.STATUS_META[row.code];
+          var done = Boolean(row.at);
+          return '<li class="flex items-center justify-between gap-3">' +
+            '<span class="flex items-center gap-2 ' + (done ? 'text-amber-900' : 'text-amber-700/50') + '">' +
+            '<span aria-hidden="true">' + (done ? '✓' : meta.icon) + '</span>' + Cafe.escapeHtml(row.label) + '</span>' +
+            '<span class="font-mono text-xs ' + (done ? 'text-amber-800' : 'text-amber-700/50') + '">' +
+            (done ? Cafe.escapeHtml(Cafe.formatDateTime(row.at)) : '—') + '</span>' +
+            '</li>';
+        }).join('') + '</ol>';
+      }
+
+      function render() {
+        if (!authorized) {
+          root.innerHTML = UI.errorBanner(
+            'This device can no longer verify order ' + entry.orderId + '. It may have been placed on another browser.',
+            '<a href="menu.html" class="font-semibold underline">Start a new order</a>'
+          );
+          return;
+        }
+
+        if (!order) {
+          root.innerHTML = UI.loading('Fetching your order…') +
+            (lastError ? '<div class="mt-4">' + UI.errorBanner(lastError.friendly ? lastError.friendly() : 'Could not reach the café. Retrying…') + '</div>' : '');
+          return;
+        }
+
+        var meta = Cafe.statusMeta(order.status);
+        var finished = order.status === 'SERVED';
+
+        root.innerHTML = '' +
+          '<div class="rounded-2xl border border-amber-200 bg-white p-6 shadow-sm">' +
+            '<div class="flex flex-wrap items-start justify-between gap-4">' +
+              '<div>' +
+                '<p class="text-xs uppercase tracking-wide text-amber-700/80">Order</p>' +
+                '<p class="font-mono text-lg font-bold text-amber-900">' + Cafe.escapeHtml(order.orderId) + '</p>' +
+                '<p class="mt-1 text-sm text-amber-700/80">' + UI.fulfilmentLabel(order.fulfilment) +
+                  ' · placed ' + Cafe.escapeHtml(Cafe.formatDateTime(order.createdAt)) + '</p>' +
+              '</div>' +
+              '<div class="text-right" aria-live="polite">' + UI.statusBadge(order.status) +
+                '<p class="mt-1 text-xs text-amber-700/80">' + Cafe.escapeHtml(meta.blurb) + '</p>' +
+              '</div>' +
+            '</div>' +
+            '<div class="mt-5">' + UI.stepper(order.status) + '</div>' +
+          '</div>' +
+
+          '<div class="mt-6">' + estimateHtml() + '</div>' +
+
+          '<div class="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">' +
+            '<section class="rounded-2xl border border-amber-200 bg-white p-5 shadow-sm">' +
+              '<h2 class="mb-3 text-sm font-bold uppercase tracking-wide text-amber-900">Your items</h2>' +
+              UI.itemsList(order) +
+            '</section>' +
+            '<section class="rounded-2xl border border-amber-200 bg-white p-5 shadow-sm">' +
+              '<h2 class="mb-3 text-sm font-bold uppercase tracking-wide text-amber-900">Totals from the café</h2>' +
+              UI.totalsBlock(order) +
+              '<p class="mt-3 text-xs text-amber-700/70">Pricing is calculated by the café, not the browser. ' +
+                'Payment is simulated for this demo.</p>' +
+            '</section>' +
+          '</div>' +
+
+          '<section class="mt-6 rounded-2xl border border-amber-200 bg-white p-5 shadow-sm">' +
+            '<h2 class="mb-3 text-sm font-bold uppercase tracking-wide text-amber-900">Progress</h2>' +
+            timelineHtml() +
+          '</section>' +
+
+          '<div class="mt-6 flex justify-center">' +
+            '<button type="button" id="clear-order-btn" class="rounded-xl border border-amber-300 bg-white px-5 py-2.5 text-sm font-semibold text-amber-900 hover:bg-amber-50">' +
+              (finished ? 'Clear this order' : 'Dismiss tracking on this device') +
+            '</button>' +
+          '</div>';
+
+        var clearBtn = document.getElementById('clear-order-btn');
+        if (clearBtn) {
+          clearBtn.addEventListener('click', function () {
+            poller.stop();
+            Cafe.activeOrder.clear();
+            location.href = 'menu.html';
+          });
+        }
+
+        tickEstimate();
+      }
+
+      /** Live estimate countdown. It never decides that the order is ready. */
+      function tickEstimate() {
+        var clock = document.getElementById('estimate-clock');
+        if (!clock || !order) return;
+        var remaining = order.estimateReadyAt ? new Date(order.estimateReadyAt).getTime() - Date.now() : 0;
+        clock.textContent = remaining > 0 ? Cafe.countdown(remaining) : 'taking longer than estimated';
+      }
+
+      /** Confetti fires only for a genuine backend READY (or later). */
+      function celebrateIfReady() {
+        if (!order || !Cafe.isAtLeast(order.status, 'READY')) return;
+        var live = Cafe.activeOrder.get() || {};
+        if (live.celebrated) return;
+        Cafe.activeOrder.patch({ celebrated: true });
+        if (window.confetti) {
+          try { window.confetti({ particleCount: 140, spread: 90, origin: { y: 0.3 } }); } catch (err) { /* decorative only */ }
+        }
+      }
+
+      function load() {
+        return Cafe.api.trackOrder(entry.orderId, entry.trackingToken)
+          .then(function (fresh) {
+            order = fresh;
+            lastError = null;
+            authorized = true;
+            // Keep the floating bar (other pages) in sync with what the server says.
+            Cafe.activeOrder.patch({ status: fresh.status, estimateReadyAt: fresh.estimateReadyAt });
+            render();
+            celebrateIfReady();
+          })
+          .catch(function (err) {
+            var fatal = err instanceof Cafe.ApiError && (err.status === 401 || err.status === 403 || err.status === 404);
+            if (fatal) {
+              // Never invent a status when the order can no longer be verified.
+              authorized = false;
+              order = null;
+              poller.stop();
+              render();
+              return;
+            }
+            // Network / 5xx: keep showing the last real status, just note the hiccup.
+            lastError = err;
+            render();
+          });
+      }
+
+      var poller = Cafe.poll(load, { intervalMs: Cafe.POLL_INTERVAL_MS });
+
+      render();
+      poller.start();
+      setInterval(tickEstimate, 1000);
+    })();
+  </script>
+</body>
+</html>

@@ -140,6 +140,7 @@
       '</div>' +
       statusBadge(order.status) +
       '</header>' +
+      (options.note ? '<p class="mt-2 text-xs text-amber-700/70">' + e(options.note) + '</p>' : '') +
       '<div class="mt-3">' + itemsList(order) + '</div>' +
       '<footer class="mt-3 flex items-center justify-between gap-2 border-t border-amber-100 pt-3">' +
       '<span class="text-xs text-amber-700/80">⏱️ ' + order.totalPrepTime + 's · ' + Cafe.money(order.total) + '</span>' +
