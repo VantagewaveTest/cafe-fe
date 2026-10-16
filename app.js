@@ -114,12 +114,13 @@ function dismissOrder() {
 // Poll backend for order status (every ~3 seconds)
 async function pollOrderStatus() {
   const order = getActiveOrder();
-  if (!order || !order.secret) return;
+  if (!order || !order.orderAccessToken) return;
 
   try {
-    const response = await fetch(`${API_BASE}/orders/${order.orderId}?secret=${order.secret}`);
-    if (response.status === 403 || response.status === 404) {
-      // Order not found or unauthorized
+    const response = await fetch(`${API_BASE}/orders/${order.orderId}`, {
+      headers: { 'X-Order-Token': order.orderAccessToken }
+    });
+    if (response.status === 401 || response.status === 403 || response.status === 404) {
       return;
     }
     if (response.ok) {
@@ -127,7 +128,7 @@ async function pollOrderStatus() {
       if (data.success && data.order) {
         const previousStatus = order.backendStatus;
         order.backendStatus = data.order.status;
-        order.timestamps = data.order.timestamps;
+        order.timestamps = data.order.timestamps || data.order.statusHistory;
         setActiveOrder(order);
 
         // Trigger confetti when backend reports READY
@@ -139,7 +140,6 @@ async function pollOrderStatus() {
       }
     }
   } catch (err) {
-    // Network error - will retry on next poll
     console.error('Poll error:', err);
   }
 }

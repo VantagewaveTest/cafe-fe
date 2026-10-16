@@ -232,18 +232,18 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             items: items.map(i => ({ id: i.id, quantity: i.quantity })),
-            tableNo,
-            payment: { method: paymentMethod, status: 'paid' }
+            tableNumber: tableNo,
+            paymentMethod: paymentMethod
           })
         });
         const data = await response.json();
 
         if (data.success) {
-          // Set active order in localStorage with secret and end timestamp
+          // Set active order in localStorage with orderAccessToken and end timestamp
           const endTime = Date.now() + (data.totalPrepTime * 1000);
           setActiveOrder({
             orderId: data.orderId,
-            secret: data.secret,
+            orderAccessToken: data.orderAccessToken,
             endTime,
             backendStatus: data.status,
             celebrated: false
@@ -253,7 +253,7 @@
           localStorage.removeItem('cafe_cart');
           cart = {};
 
-          alert(`Order placed successfully!\nOrder ID: ${data.orderId}\n\nSave this tracking secret: ${data.secret}\n\n(Simulated payment - no real charge)`);
+          alert(`Order placed successfully!\nOrder ID: ${data.orderId}\n\nSave this tracking token: ${data.orderAccessToken}\n\n(Simulated payment - no real charge)`);
           window.location.href = 'menu.html';
         } else {
           alert('Failed to place order: ' + data.message);

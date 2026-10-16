@@ -32,11 +32,18 @@
         <div class="space-y-4">
           <div>
             <label class="block text-xs font-bold text-amber-900 uppercase tracking-wide mb-1">Username</label>
-            <input type="text" id="staff-username" placeholder="e.g. chef_boss" class="w-full border border-amber-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
+            <input type="text" id="staff-username" placeholder="e.g. chef01" class="w-full border border-amber-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
           </div>
           <div>
-            <label class="block text-xs font-bold text-amber-900 uppercase tracking-wide mb-1">PIN</label>
-            <input type="password" id="staff-pin" placeholder="e.g. 1234" class="w-full border border-amber-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
+            <label class="block text-xs font-bold text-amber-900 uppercase tracking-wide mb-1">Password</label>
+            <input type="password" id="staff-password" placeholder="e.g. chef01" class="w-full border border-amber-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-amber-900 uppercase tracking-wide mb-1">Role</label>
+            <select id="staff-role" class="w-full border border-amber-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
+              <option value="CHEF">CHEF</option>
+              <option value="WAITER">WAITER</option>
+            </select>
           </div>
           <div id="login-error" class="text-red-600 text-sm hidden"></div>
           <button onclick="staffLogin()" class="w-full bg-amber-800 hover:bg-amber-900 text-white py-3 rounded-xl font-semibold shadow-lg transition">
@@ -46,8 +53,8 @@
 
         <div class="mt-6 p-4 bg-amber-50 rounded-lg border border-amber-100">
           <p class="text-xs text-amber-700 font-bold mb-2">Demo Credentials:</p>
-          <p class="text-xs text-amber-600">Chef: chef_boss / 1234</p>
-          <p class="text-xs text-amber-600">Waiter: waiter_1 / 1234</p>
+          <p class="text-xs text-amber-600">Chef: chef01 / chef01</p>
+          <p class="text-xs text-amber-600">Waiter: waiter01 / waiter01</p>
         </div>
       </div>
     </div>
@@ -79,7 +86,7 @@
       <!-- History & Stats -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div class="bg-white rounded-2xl p-6 shadow-md border border-amber-200">
-          <h3 class="text-lg font-bold text-amber-900 mb-4">Preparation History</h3>
+          <h3 class="text-lg font-bold text-amber-900 mb-4" id="history-title">Preparation History</h3>
           <div class="mb-4">
             <input type="date" id="history-date" class="border border-amber-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
             <button onclick="loadHistory()" class="ml-2 bg-amber-800 hover:bg-amber-900 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Filter</button>
@@ -89,7 +96,7 @@
           </div>
         </div>
         <div class="bg-white rounded-2xl p-6 shadow-md border border-amber-200">
-          <h3 class="text-lg font-bold text-amber-900 mb-4">Top Prepared Items</h3>
+          <h3 class="text-lg font-bold text-amber-900 mb-4" id="top-items-title">Top Prepared Items</h3>
           <div id="top-items" class="space-y-2">
             <p class="text-amber-600 text-sm">Loading...</p>
           </div>
@@ -116,11 +123,12 @@
 
     async function staffLogin() {
       const username = document.getElementById('staff-username').value.trim();
-      const pin = document.getElementById('staff-pin').value.trim();
+      const password = document.getElementById('staff-password').value.trim();
+      const role = document.getElementById('staff-role').value;
       const errorDiv = document.getElementById('login-error');
 
-      if (!username || !pin) {
-        errorDiv.textContent = 'Please enter username and PIN.';
+      if (!username || !password) {
+        errorDiv.textContent = 'Please enter username and password.';
         errorDiv.classList.remove('hidden');
         return;
       }
@@ -129,12 +137,12 @@
         const response = await fetch(`${API_BASE}/staff/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, pin })
+          body: JSON.stringify({ username, password, role })
         });
         const data = await response.json();
 
         if (data.success) {
-          staffSession = { token: data.token, role: data.role, name: data.name };
+          staffSession = { token: data.token, role: data.role, username: data.username };
           setStaffSession(staffSession);
           showDashboard();
         } else {
@@ -163,16 +171,20 @@
       document.getElementById('dashboard-section').classList.remove('hidden');
 
       const role = staffSession.role;
-      const name = staffSession.name;
+      const username = staffSession.username;
 
       if (role === 'CHEF') {
         document.getElementById('dashboard-title').textContent = 'Chef Dashboard';
-        document.getElementById('dashboard-subtitle').textContent = `Welcome, ${name}`;
+        document.getElementById('dashboard-subtitle').textContent = `Welcome, ${username}`;
         document.getElementById('queue-title').textContent = 'Kitchen Queue (FIFO - Oldest Pending First)';
+        document.getElementById('history-title').textContent = 'Preparation History';
+        document.getElementById('top-items-title').textContent = 'Top Prepared Items';
       } else if (role === 'WAITER') {
         document.getElementById('dashboard-title').textContent = 'Waiter Dashboard';
-        document.getElementById('dashboard-subtitle').textContent = `Welcome, ${name}`;
+        document.getElementById('dashboard-subtitle').textContent = `Welcome, ${username}`;
         document.getElementById('queue-title').textContent = 'Service Queue';
+        document.getElementById('history-title').textContent = 'Service History';
+        document.getElementById('top-items-title').textContent = 'Top Served Items';
       }
 
       loadOrders();
@@ -191,7 +203,8 @@
     async function loadOrders() {
       const queueDiv = document.getElementById('orders-queue');
       try {
-        const response = await fetch(`${API_BASE}/staff/orders`, {
+        const endpoint = staffSession.role === 'CHEF' ? `${API_BASE}/chef/queue` : `${API_BASE}/waiter/orders`;
+        const response = await fetch(endpoint, {
           headers: { 'Authorization': `Bearer ${staffSession.token}` }
         });
 
@@ -202,8 +215,11 @@
 
         const data = await response.json();
         if (data.success) {
-          renderOrders(data.orders);
-          renderStatusCounts(data.orders);
+          if (staffSession.role === 'CHEF') {
+            renderChefOrders(data);
+          } else {
+            renderWaiterOrders(data);
+          }
         } else {
           queueDiv.innerHTML = `<p class="text-red-600 text-sm">${data.message}</p>`;
         }
@@ -212,79 +228,115 @@
       }
     }
 
-    function renderOrders(orders) {
+    function renderChefOrders(data) {
       const queueDiv = document.getElementById('orders-queue');
-      if (orders.length === 0) {
+      const allOrders = [...(data.queue || []), ...(data.preparing || []), ...(data.ready || [])];
+      
+      if (allOrders.length === 0) {
         queueDiv.innerHTML = '<p class="text-amber-600 text-sm">No orders in queue.</p>';
-        return;
+      } else {
+        queueDiv.innerHTML = allOrders.map(order => {
+          const itemsList = order.items.map(i => `${i.quantity}x ${i.name}`).join(', ');
+          const tableInfo = order.tableNumber ? `<span class="text-xs bg-amber-100 px-2 py-0.5 rounded">${order.tableNumber}</span>` : '';
+          const statusColor = {
+            'PENDING': 'bg-yellow-100 text-yellow-800',
+            'PREPARING': 'bg-blue-100 text-blue-800',
+            'READY': 'bg-green-100 text-green-800'
+          }[order.status] || 'bg-gray-100 text-gray-800';
+
+          let actionButtons = '';
+          if (order.status === 'PENDING') {
+            actionButtons = `<button onclick="chefUpdateStatus('${order.orderId}', 'PREPARING')" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-medium transition">Start Preparing</button>`;
+          } else if (order.status === 'PREPARING') {
+            actionButtons = `<button onclick="chefUpdateStatus('${order.orderId}', 'READY')" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded text-xs font-medium transition">Mark Ready</button>`;
+          }
+
+          return `
+            <div class="flex items-center justify-between p-3 bg-amber-50 rounded-lg border border-amber-100">
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="font-bold text-amber-900 text-sm">${order.orderId}</span>
+                  <span class="px-2 py-0.5 rounded text-xs font-medium ${statusColor}">${order.status}</span>
+                  ${tableInfo}
+                </div>
+                <p class="text-xs text-amber-700">${itemsList}</p>
+              </div>
+              <div class="ml-4">${actionButtons}</div>
+            </div>
+          `;
+        }).join('');
       }
 
-      queueDiv.innerHTML = orders.map(order => {
-        const itemsList = order.items.map(i => `${i.quantity}x ${i.name}`).join(', ');
-        const tableInfo = order.tableNo ? `<span class="text-xs bg-amber-100 px-2 py-0.5 rounded">${order.tableNo}</span>` : '';
-        const statusColor = {
-          'PENDING': 'bg-yellow-100 text-yellow-800',
-          'PREPARING': 'bg-blue-100 text-blue-800',
-          'READY': 'bg-green-100 text-green-800',
-          'PICKED_UP': 'bg-purple-100 text-purple-800',
-          'SERVED': 'bg-gray-100 text-gray-800'
-        }[order.status] || 'bg-gray-100 text-gray-800';
-
-        let actionButtons = '';
-        if (staffSession.role === 'CHEF') {
-          if (order.status === 'PENDING') {
-            actionButtons = `<button onclick="updateStatus('${order.orderId}', 'PREPARING')" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-medium transition">Start Preparing</button>`;
-          } else if (order.status === 'PREPARING') {
-            actionButtons = `<button onclick="updateStatus('${order.orderId}', 'READY')" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded text-xs font-medium transition">Mark Ready</button>`;
-          }
-        } else if (staffSession.role === 'WAITER') {
-          if (order.status === 'READY') {
-            actionButtons = `<button onclick="updateStatus('${order.orderId}', 'PICKED_UP')" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded text-xs font-medium transition">Pick Up</button>`;
-          } else if (order.status === 'PICKED_UP') {
-            actionButtons = `<button onclick="updateStatus('${order.orderId}', 'SERVED')" class="bg-gray-600 hover:bg-gray-700 text-white px-3 py-1.5 rounded text-xs font-medium transition">Serve</button>`;
-          }
-        }
-
-        return `
-          <div class="flex items-center justify-between p-3 bg-amber-50 rounded-lg border border-amber-100">
-            <div class="flex-1">
-              <div class="flex items-center gap-2 mb-1">
-                <span class="font-bold text-amber-900 text-sm">${order.orderId}</span>
-                <span class="px-2 py-0.5 rounded text-xs font-medium ${statusColor}">${order.status}</span>
-                ${tableInfo}
-              </div>
-              <p class="text-xs text-amber-700">${itemsList}</p>
-            </div>
-            <div class="ml-4">${actionButtons}</div>
-          </div>
-        `;
-      }).join('');
-    }
-
-    function renderStatusCounts(orders) {
-      const counts = { PENDING: 0, PREPARING: 0, READY: 0, PICKED_UP: 0, SERVED: 0 };
-      orders.forEach(o => { if (counts[o.status] !== undefined) counts[o.status]++; });
-
+      // Render counts
+      const counts = data.counts || { pending: 0, preparing: 0, ready: 0 };
       const container = document.getElementById('status-counts');
       const colors = {
-        PENDING: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-        PREPARING: 'bg-blue-100 text-blue-800 border-blue-200',
-        READY: 'bg-green-100 text-green-800 border-green-200',
-        PICKED_UP: 'bg-purple-100 text-purple-800 border-purple-200',
-        SERVED: 'bg-gray-100 text-gray-800 border-gray-200'
+        pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+        preparing: 'bg-blue-100 text-blue-800 border-blue-200',
+        ready: 'bg-green-100 text-green-800 border-green-200'
       };
-
       container.innerHTML = Object.entries(counts).map(([status, count]) => `
-        <div class="p-3 rounded-lg border ${colors[status]} text-center">
+        <div class="p-3 rounded-lg border ${colors[status] || 'bg-gray-100 text-gray-800 border-gray-200'} text-center">
           <div class="text-2xl font-bold">${count}</div>
-          <div class="text-xs font-medium">${status}</div>
+          <div class="text-xs font-medium">${status.toUpperCase()}</div>
         </div>
       `).join('');
     }
 
-    async function updateStatus(orderId, newStatus) {
+    function renderWaiterOrders(data) {
+      const queueDiv = document.getElementById('orders-queue');
+      const allOrders = [...(data.ready || []), ...(data.preparing || [])];
+      
+      if (allOrders.length === 0) {
+        queueDiv.innerHTML = '<p class="text-amber-600 text-sm">No orders in queue.</p>';
+      } else {
+        queueDiv.innerHTML = allOrders.map(order => {
+          const itemsList = order.items.map(i => `${i.quantity}x ${i.name}`).join(', ');
+          const tableInfo = order.tableNumber ? `<span class="text-xs bg-amber-100 px-2 py-0.5 rounded">${order.tableNumber}</span>` : '';
+          const statusColor = {
+            'PREPARING': 'bg-blue-100 text-blue-800',
+            'READY': 'bg-green-100 text-green-800'
+          }[order.status] || 'bg-gray-100 text-gray-800';
+
+          let actionButtons = '';
+          if (order.status === 'READY') {
+            actionButtons = `<button onclick="waiterPickup('${order.orderId}')" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded text-xs font-medium transition">Pick Up</button>`;
+          }
+
+          return `
+            <div class="flex items-center justify-between p-3 bg-amber-50 rounded-lg border border-amber-100">
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="font-bold text-amber-900 text-sm">${order.orderId}</span>
+                  <span class="px-2 py-0.5 rounded text-xs font-medium ${statusColor}">${order.status}</span>
+                  ${tableInfo}
+                </div>
+                <p class="text-xs text-amber-700">${itemsList}</p>
+              </div>
+              <div class="ml-4">${actionButtons}</div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // Render counts
+      const counts = data.counts || { preparing: 0, ready: 0 };
+      const container = document.getElementById('status-counts');
+      const colors = {
+        preparing: 'bg-blue-100 text-blue-800 border-blue-200',
+        ready: 'bg-green-100 text-green-800 border-green-200'
+      };
+      container.innerHTML = Object.entries(counts).map(([status, count]) => `
+        <div class="p-3 rounded-lg border ${colors[status] || 'bg-gray-100 text-gray-800 border-gray-200'} text-center">
+          <div class="text-2xl font-bold">${count}</div>
+          <div class="text-xs font-medium">${status.toUpperCase()}</div>
+        </div>
+      `).join('');
+    }
+
+    async function chefUpdateStatus(orderId, newStatus) {
       try {
-        const response = await fetch(`${API_BASE}/staff/orders/${orderId}/status`, {
+        const response = await fetch(`${API_BASE}/chef/orders/${orderId}/status`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
@@ -292,7 +344,27 @@
           },
           body: JSON.stringify({ status: newStatus })
         });
+        const data = await response.json();
+        if (data.success) {
+          loadOrders();
+        } else {
+          alert('Error: ' + data.message);
+        }
+      } catch (err) {
+        alert('Network error. Please try again.');
+      }
+    }
 
+    async function waiterPickup(orderId) {
+      try {
+        const response = await fetch(`${API_BASE}/waiter/orders/${orderId}/pickup`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${staffSession.token}`
+          },
+          body: JSON.stringify({})
+        });
         const data = await response.json();
         if (data.success) {
           loadOrders();
@@ -309,7 +381,8 @@
       const historyDiv = document.getElementById('history-list');
 
       try {
-        let url = `${API_BASE}/staff/history`;
+        const endpoint = staffSession.role === 'CHEF' ? `${API_BASE}/chef/history` : `${API_BASE}/waiter/history`;
+        let url = endpoint;
         if (dateInput) url += `?date=${dateInput}`;
 
         const response = await fetch(url, {
@@ -323,10 +396,10 @@
 
         const data = await response.json();
         if (data.success) {
-          if (data.orders.length === 0) {
+          if (data.history.length === 0) {
             historyDiv.innerHTML = '<p class="text-amber-600 text-sm">No orders found for this date.</p>';
           } else {
-            historyDiv.innerHTML = data.orders.map(o => `
+            historyDiv.innerHTML = data.history.map(o => `
               <div class="flex items-center justify-between p-2 bg-amber-50 rounded border border-amber-100 text-xs">
                 <span class="font-medium text-amber-900">${o.orderId}</span>
                 <span class="text-amber-700">${o.status}</span>
@@ -343,25 +416,29 @@
     async function loadTopItems() {
       const topDiv = document.getElementById('top-items');
       try {
-        const response = await fetch(`${API_BASE}/staff/history`, {
-          headers: { 'Authorization': `Bearer ${staffSession.token}` }
-        });
+        if (staffSession.role === 'CHEF') {
+          const response = await fetch(`${API_BASE}/chef/top-items`, {
+            headers: { 'Authorization': `Bearer ${staffSession.token}` }
+          });
 
-        if (response.status === 401) {
-          staffLogout();
-          return;
-        }
+          if (response.status === 401) {
+            staffLogout();
+            return;
+          }
 
-        const data = await response.json();
-        if (data.success && data.topItems.length > 0) {
-          topDiv.innerHTML = data.topItems.map((item, i) => `
-            <div class="flex items-center justify-between p-2 bg-amber-50 rounded border border-amber-100 text-sm">
-              <span class="text-amber-900 font-medium">${i + 1}. ${item.name}</span>
-              <span class="text-amber-700 font-bold">${item.count}</span>
-            </div>
-          `).join('');
+          const data = await response.json();
+          if (data.success && data.topItems.length > 0) {
+            topDiv.innerHTML = data.topItems.map((item, i) => `
+              <div class="flex items-center justify-between p-2 bg-amber-50 rounded border border-amber-100 text-sm">
+                <span class="text-amber-900 font-medium">${i + 1}. ${item.name}</span>
+                <span class="text-amber-700 font-bold">${item.quantity}</span>
+              </div>
+            `).join('');
+          } else {
+            topDiv.innerHTML = '<p class="text-amber-600 text-sm">No data available.</p>';
+          }
         } else {
-          topDiv.innerHTML = '<p class="text-amber-600 text-sm">No data available.</p>';
+          topDiv.innerHTML = '<p class="text-amber-600 text-sm">Top items available for CHEF role only.</p>';
         }
       } catch (err) {
         topDiv.innerHTML = '<p class="text-red-600 text-sm">Network error.</p>';
