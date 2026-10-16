@@ -32,6 +32,10 @@
         <div class="text-xs text-amber-600 uppercase tracking-wide mb-1">Ready for Pickup</div>
         <div id="stat-ready" class="text-2xl font-extrabold text-amber-900">0</div>
       </div>
+      <div class="bg-white rounded-2xl p-4 border border-emerald-200">
+        <div class="text-xs text-emerald-600 uppercase tracking-wide mb-1">Picked Up to Serve</div>
+        <div id="stat-picked-up" class="text-2xl font-extrabold text-emerald-900">0</div>
+      </div>
     </div>
 
     <!-- Waiter Queues -->
@@ -53,6 +57,14 @@
       <div class="space-y-3 mt-4">
         <h3 class="text-xs font-bold text-amber-600 uppercase tracking-wide mb-2">Ready for Pickup</h3>
         <div id="ready-queue" class="space-y-3">
+          <!-- Rendered here -->
+        </div>
+      </div>
+
+      <!-- Picked Up Queue -->
+      <div class="space-y-3 mt-4">
+        <h3 class="text-xs font-bold text-emerald-600 uppercase tracking-wide mb-2">Picked Up - Ready to Serve</h3>
+        <div id="picked-up-queue" class="space-y-3">
           <!-- Rendered here -->
         </div>
       </div>
@@ -92,10 +104,11 @@
         return;
       }
 
-      const { preparing, ready, counts } = res.body;
+      const { preparing, ready, pickedUp, counts } = res.body;
 
       document.getElementById('stat-preparing').textContent = counts.preparing;
       document.getElementById('stat-ready').textContent = counts.ready;
+      document.getElementById('stat-picked-up').textContent = counts.pickedUp;
 
       // Render preparing queue
       const prepEl = document.getElementById('preparing-queue');
@@ -113,7 +126,7 @@
         `).join('');
       }
 
-      // Render ready queue
+      // Render ready queue (for pickup)
       const readyEl = document.getElementById('ready-queue');
       if (ready.length === 0) {
         readyEl.innerHTML = '<p class="text-amber-500 text-xs text-center py-4">No orders ready for pickup.</p>';
@@ -126,12 +139,26 @@
               <div class="text-xs text-amber-500">Ready ${new Date(order.readyAt).toLocaleTimeString()}</div>
             </div>
             <div class="flex gap-2">
-              ${order.status === 'READY' ? `
-                <button onclick="pickupOrder('${order.orderId}')" class="bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">Pickup</button>
-              ` : ''}
-              ${order.status === 'PICKED_UP' ? `
-                <button onclick="serveOrder('${order.orderId}')" class="bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">Serve</button>
-              ` : ''}
+              <button onclick="pickupOrder('${order.orderId}')" class="bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">Pickup</button>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      // Render picked up queue (for serve)
+      const pickedUpEl = document.getElementById('picked-up-queue');
+      if (pickedUp.length === 0) {
+        pickedUpEl.innerHTML = '<p class="text-amber-500 text-xs text-center py-4">No orders ready to serve.</p>';
+      } else {
+        pickedUpEl.innerHTML = pickedUp.map(order => `
+          <div class="bg-emerald-50 rounded-xl p-4 border border-emerald-200 flex justify-between items-center">
+            <div>
+              <div class="font-bold text-amber-900">${order.orderId}</div>
+              <div class="text-xs text-amber-600">${order.tableNumber || 'Counter'} • ${order.items.map(i => i.quantity + '× ' + i.name).join(', ')}</div>
+              <div class="text-xs text-amber-500">Picked up ${new Date(order.pickedUpAt).toLocaleTimeString()}</div>
+            </div>
+            <div class="flex gap-2">
+              <button onclick="serveOrder('${order.orderId}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">Serve</button>
             </div>
           </div>
         `).join('');
