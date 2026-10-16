@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Daily Grind Café - Track Your Order</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-amber-50 min-h-hull flex flex-col justify-between font-sans">
+
+  <!-- Header -->
+  <header class="bg-amber-900 text-amber-100 shadow-md py-4 px-6 flex justify-between items-center">
+    <div class="text-2xl font-bold tracking-wider flex items-center gap-2">
+      <span>☕</span> The Daily Grind Café
+    </div>
+    <nav class="space-x-6 text-sm font-medium">
+      <a href="index.html" class="hover:text-amber-300 transition">Home</a>
+      <a href="menu.html" class="hover:text-amber-300 transition">Menu</a>
+      <a href="cart.html" class="hover:text-amber-300 transition">Cart</a>
+      <a href="tracking.html" class="underline underline-offset-4">Track</a>
+    </nav>
+  </header>
+
+  <main class="flex-grow max-w-2xl w-full mx-auto px-4 py-10">
+    <h1 class="text-3xl font-bold text-amber-900 mb-2 text-center">Track Your Order</h1>
+    <p id="track-sub" class="text-amber-800/80 text-sm text-center mb-8">Live status, updated automatically every few seconds.</p>
+
+    <div id="status-card" class="bg-white rounded-2xl p-6 shadow-md border border-amber-200">
+      <!-- Loading -->
+      <div id="state-loading" class="text-center py-8 text-amber-700">Loading your order…</div>
+
+      <!-- Error / no active order -->
+      <div id="state-error" class="text-center py-8 hidden">
+        <div class="text-4xl mb-3">🔍</div>
+        <p id="error-message" class="text-amber-800 mb-4">We couldn't find an active order.</p>
+        <a href="menu.html" class="bg-amber-800 hover:bg-amber-900 text-white px-6 py-2.5 rounded-xl font-medium inline-block shadow transition">Browse Menu</a>
+      </div>
+
+      <!-- Loaded order -->
+      <div id="state-order" class="hidden">
+        <div class="flex justify-between items-start mb-4">
+          <div>
+            <div class="text-xs uppercase tracking-wide text-amber-600 font-bold">Order</div>
+            <div id="order-id" class="text-xl font-bold text-amber-900"></div>
+          </div>
+          <div id="status-badge" class="px-4 py-1.5 rounded-full text-sm font-bold"></div>
+        </div>
+
+        <!-- Status stepper -->
+        <div id="stepper" class="grid grid-cols-5 gap-2 mb-6"></div>
+
+        <div id="fulfillment-line" class="text-sm text-amber-800 mb-2"></div>
+        <div id="updated-line" class="text-xs text-amber-600 mb-4"></div>
+
+        <div class="border-t border-amber-100 pt-4">
+          <div class="text-xs uppercase tracking-wide text-amber-600 font-bold mb-2">Items</div>
+          <ul id="items-list" class="space-y-1 text-sm text-amber-800"></ul>
+        </div>
+
+        <div class="border-t border-amber-100 pt-4 mt-4 text-sm">
+          <div class="flex justify-between"><span>Subtotal</span><span id="o-subtotal" class="font-semibold"></span></div>
+          <div class="flex justify-between"><span>Tax (5%)</span><span id="o-tax" class="font-semibold"></span></div>
+          <div class="flex justify-between font-bold text-amber-900 text-base pt-1 border-t border-amber-100 mt-1"><span>Total</span><span id="o-total"></span></div>
+          <div class="text-xs text-amber-500 italic mt-2">Payment (simulated): <span id="o-payment"></span></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="bg-amber-950 text-amber-300/60 py-4 text-center text-xs">
+    &copy; 2026 The Daily Grind Café. Freshly brewed with love.
+  </footer>
+
+  <script src="app.js"></script>
+  <script>
+    const STATUSES = ['PENDING', 'PREPARING', 'READY', 'PICKED_UP', 'SERVED'];
+    const LABELS = { PENDING: 'Pending', PREPARING: 'Preparing', READY: 'Ready', PICKED_UP: 'Picked Up', SERVED: 'Served' };
+    const EMOJI = { PENDING: '🧾', PREPARING: '👨‍🍳', READY: '✅', PICKED_UP: '🚶', SERVED: '🍽️' };
+    const POLL_MS = 3000;
+    let celebrated = false;
+
+    function active() { return getActiveOrder(); }
+
+    function showError(msg) {
+      document.getElementById('state-loading').classList.add('hidden');
+      document.getElementById('state-order').classList.add('hidden');
+      document.getElementById('state-error').classList.remove('hidden');
+      document.getElementById('error-message').textContent = msg;
+    }
+
+    function renderStepper(current) {
+      const idx = STATUSES.indexOf(current);
+      document.getElementById('stepper').innerHTML = STATUSES.map((s, i) => {
+        const done = i <= idx;
+        const activeStep = i === idx;
+        const cls = activeStep
+          ? 'bg-amber-700 text-white'
+          : (done ? 'bg-amber-200 text-amber-900' : 'bg-amber-100 text-amber-400');
+        return `
+          <div class="rounded-xl py-2 text-center ${cls}">
+            <div class="text-lg">${EMOJI[s]}</div>
+            <div class="text-[10px] font-bold uppercase tracking-wide">${LABELS[s]}</div>
+          </div>`;
+      }).join('');
+    }
+
+    function renderOrder(order) {
+      document.getElementById('state-loading').classList.add('hidden');
+      document.getElementById('state-error').classList.add('hidden');
+      document.getElementById('state-order').classList.remove('hidden');
+
+      document.getElementById('order-id').textContent = '#' + order.orderId;
+      const badge = document.getElementById('status-badge');
+      badge.textContent = LABELS[order.status] || order.status;
+      badge.className = 'px-4 py-1.5 rounded-full text-sm font-bold ' +
+        (order.status === 'READY' || order.status === 'SERVED' ? 'bg-emerald-600 text-white'
+          : order.status === 'PREPARING' ? 'bg-amber-500 text-white'
+          : 'bg-amber-200 text-amber-900');
+
+      renderStepper(order.status);
+
+      const ff = order.fulfillment === 'counter' ? 'Counter pickup' : `Table service — ${order.tableNumber || '—'}`;
+      document.getElementById('fulfillment-line').textContent = ff;
+      const lastTs = order.statusTimestamps && order.statusTimestamps[order.status];
+      document.getElementById('updated-line').textContent = lastTs ? `Last updated ${new Date(lastTs).toLocaleTimeString()}` : '';
+
+      document.getElementById('items-list').innerHTML = (order.items || []).map(i =>
+        `<li class="flex justify-between"><span>${i.quantity} × ${i.name}</span><span>$${(i.lineTotal ?? (i.price * i.quantity)).toFixed(2)}</span></li>`
+      ).join('');
+
+      document.getElementById('o-subtotal').textContent = '$' + Number(order.subtotal).toFixed(2);
+      document.getElementById('o-tax').textContent = '$' + Number(order.tax).toFixed(2);
+      document.getElementById('o-total').textContent = '$' + Number(order.total).toFixed(2);
+      document.getElementById('o-payment').textContent = (order.paymentMethod || 'card') + ' (not charged)';
+
+      // Celebrate ONLY when the backend reports READY — never from the timer.
+      if (order.status === 'READY' && !celebrated) {
+        celebrated = true;
+        if (window.confetti) window.confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+      }
+    }
+
+    async function poll() {
+      const a = active();
+      if (!a || !a.orderId || !a.trackingToken) {
+        showError('No active order to track. Place an order first.');
+        return;
+      }
+      try {
+        const res = await fetch(`${API_BASE}/orders/${a.orderId}`, {
+          headers: { 'X-Order-Token': a.trackingToken }
+        });
+        const data = await res.json();
+        if (res.status === 401 || res.status === 403) {
+          showError('Your tracking link is invalid or has expired. Please place a new order.');
+          return;
+        }
+        if (res.status === 404) {
+          showError('Order not found.');
+          return;
+        }
+        if (!res.ok || !data.success) {
+          showError(data.message || 'Failed to load order status.');
+          return;
+        }
+        renderOrder(data.order);
+      } catch (err) {
+        console.error('Tracking poll error:', err);
+        showError('Network error reaching the backend. Retrying…');
+      }
+    }
+
+    poll();
+    setInterval(poll, POLL_MS);
+  </script>
+</body>
+</html>

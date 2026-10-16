@@ -19,6 +19,8 @@
       <a href="cart.html" class="hover:text-amber-300 transition flex items-center gap-1 inline-flex">
         Cart <span id="cart-badge" class="bg-amber-700 text-white text-xs px-2 py-0.5 rounded-full">0</span>
       </a>
+      <a href="tracking.html" class="hover:text-amber-300 transition">Track</a>
+      <a href="login.html" class="hover:text-amber-300 transition">Staff</a>
     </nav>
   </header>
 
@@ -114,15 +116,12 @@
                 <span>Prep Time:</span>
                 <span class="font-bold">⏱️ ${item.prepTime}s</span>
               </div>
-              <div class="flex items-center justify-between">
+              <div class="flex items-center justify-center">
                 <div class="flex items-center gap-2 border border-amber-200 rounded-lg overflow-hidden">
                   <button onclick="updateQty('${item.id}', -1)" class="px-3 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold transition">-</button>
                   <span id="qty-${item.id}" class="px-2 font-semibold text-amber-900">${qty}</span>
                   <button onclick="updateQty('${item.id}', 1)" class="px-3 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold transition">+</button>
                 </div>
-                <button onclick="addToCart('${item.id}')" class="bg-amber-800 hover:bg-amber-900 text-white text-xs px-4 py-2 rounded-lg font-medium shadow transition">
-                  ${qty > 0 ? 'Update' : 'Add to Cart'}
-                </button>
               </div>
             </div>
           </div>
@@ -150,16 +149,6 @@
       
       localStorage.setItem('cafe_cart', JSON.stringify(cart));
       updateCartUI();
-    }
-
-    function addToCart(id) {
-      if (!cart[id]) {
-        const item = menuItems.find(i => i.id === id);
-        cart[id] = { ...item, quantity: 1 };
-      }
-      localStorage.setItem('cafe_cart', JSON.stringify(cart));
-      updateCartUI();
-      renderMenu(document.querySelector('.category-btn.bg-amber-800')?.textContent.trim() || 'All');
     }
 
     function updateCartUI() {
