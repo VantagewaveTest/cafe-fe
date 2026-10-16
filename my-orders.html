@@ -26,7 +26,7 @@
   <main class="flex-grow max-w-4xl w-full mx-auto px-4 py-8 space-y-8">
 
     <!-- Empty State -->
-    <div id="empty-state" class="hidden text-center py-16">
+    <div id="empty-state" class="text-center py-16">
       <div class="text-4xl mb-4">📭</div>
       <h3 class="text-lg font-bold text-amber-900 mb-2">No recent orders</h3>
       <p class="text-amber-600 text-sm mb-6">Place an order to start tracking.</p>
@@ -54,7 +54,7 @@
       <div class="relative mx-auto max-w-md mb-8">
         <div class="tracking-line" id="tracking-line">
           <div class="relative flex justify-between items-end mb-4">
-            <div class="flex flex-col items-center">
+            <div class="w-8 flex flex-col items-center">
               <div class="w-3 h-3 rounded-full bg-emerald-600 mx-auto mb-1 shadow" id="step-placed"></div>
               <div class="text-xs font-bold text-amber-900">Placed</div>
             </div>
@@ -125,7 +125,7 @@
   </footer>
 
   <script>
-    const RECENT_ORDERS_EL = document.getElementById('recent-orders');
+    // Get DOM elements
     const LOADING_EL = document.getElementById('loading-state');
     const ORDER_CARD_EL = document.getElementById('order-card');
     const EMPTY_EL = document.getElementById('empty-state');
@@ -167,6 +167,32 @@
 
     let POLL_TIMER = null;
 
+    // Helper: Get emoji for item name
+    function getItemEmoji(name) {
+      const nameLower = name.toLowerCase();
+      if (nameLower.includes('coffee') || nameLower.includes('espresso') || nameLower.includes('macchiato') || nameLower.includes('cold brew') || nameLower.includes('cappuccino') || nameLower.includes('americano') || nameLower.includes('mocha') || nameLower.includes('ristretto')) return '☕';
+      if (nameLower.includes('tea') || nameLower.includes('chai') || nameLower.includes('green tea')) return '🍵';
+      if (nameLower.includes('waffle')) return '🧇';
+      if (nameLower.includes('cake') || nameLower.includes('velvet') || nameLower.includes('cheesecake') || nameLower.includes('lava')) return '🍰';
+      if (nameLower.includes('croissant') || nameLower.includes('cookie') || nameLower.includes('biscotti') || nameLower.includes('tart')) return '🥐';
+      if (nameLower.includes('sandwich') || nameLower.includes('wrap')) return '🥪';
+      if (nameLower.includes('juice') || nameLower.includes('drink')) return '🥤';
+      return '🍽️';
+    }
+
+    // Helper: Get status icon
+    function getStatusIcon(status) {
+      switch(status) {
+        case 'PENDING': return '📝';
+        case 'PREPARING': return '👨‍🍳';
+        case 'READY': return '🍽️';
+        case 'PICKED_UP': return '🚚';
+        case 'SERVED': return '✅';
+        default: return '•';
+      }
+    }
+
+    // Load recent orders from localStorage
     function loadRecentOrders() {
       const activeOrder = JSON.parse(localStorage.getItem('active_cafe_order') || 'null');
 
@@ -219,29 +245,7 @@
       startPolling(order.orderId, order.orderAccessToken);
     }
 
-    function getStatusIcon(status) {
-      switch(status) {
-        case 'PENDING': return '📝';
-        case 'PREPARING': return '👨‍🍳';
-        case 'READY': return '🍽️';
-        case 'PICKED_UP': return '🚚';
-        case 'SERVED': return '✅';
-        default: return '•';
-      }
-    }
-
-    function getItemEmoji(name) {
-      const nameLower = name.toLowerCase();
-      if (nameLower.includes('coffee') || nameLower.includes('espresso') || nameLower.includes('macchiato') || nameLower.includes('cold brew') || nameLower.includes('cappuccino') || nameLower.includes('americano') || nameLower.includes('mocha') || nameLower.includes('ristretto')) return '☕';
-      if (nameLower.includes('tea') || nameLower.includes('chai') || nameLower.includes('green tea')) return '🍵';
-      if (nameLower.includes('waffle')) return '🧇';
-      if (nameLower.includes('cake') || nameLower.includes('velvet') || nameLower.includes('cheesecake') || nameLower.includes('lava')) return '🍰';
-      if (nameLower.includes('croissant') || nameLower.includes('cookie') || nameLower.includes('biscotti') || nameLower.includes('tart')) return '🥐';
-      if (nameLower.includes('sandwich') || nameLower.includes('wrap')) return '🥪';
-      if (nameLower.includes('juice') || nameLower.includes('drink')) return '🥤';
-      return '🍽️';
-    }
-
+    // Update status UI
     function updateStatus(status) {
       const statusColors = {
         PENDING: 'bg-amber-100 text-amber-900',
@@ -259,6 +263,7 @@
       renderTimeline(status);
     }
 
+    // Render tracking timeline
     function renderTimeline(currentStatus) {
       const currentIndex = STATUS_ORDER_LIST.indexOf(currentStatus);
       STATUS_ORDER_LIST.forEach((status, idx) => {
@@ -280,6 +285,7 @@
       TRACKING_CHAR.style.transform = 'translateX(' + charWidthPercent + '%)';
     }
 
+    // Poll order status from backend
     async function pollOrderStatus(orderId, orderToken) {
       try {
         const res = await CafeApi.get('/api/orders/' + orderId);
@@ -337,6 +343,7 @@
       clearInterval(POLL_TIMER);
     });
 
+    // Load on page load
     loadRecentOrders();
   </script>
 </body>
