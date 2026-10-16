@@ -18,18 +18,17 @@
       <div class="text-xl font-bold">My Orders</div>
     </div>
     <div class="text-xs text-amber-200 bg-amber-800 px-2 py-1 rounded-full">
-      Track your orders
+      Auto-updates every 3 seconds
     </div>
   </header>
 
   <!-- Main Content -->
   <main class="flex-grow max-w-4xl w-full mx-auto px-4 py-8 space-y-8">
 
-    <!-- Recent Orders -->
     <section class="space-y-4">
-      <h2 class="text-lg font-bold text-amber-900 border-b border-amber-200 pb-2">Recent Orders</h2>
+      <h2 class="text-lg font-bold text-amber-900 border-b border-amber-200 pb-2">My Orders</h2>
       <div id="recent-orders" class="space-y-3">
-        <!-- Orders will be rendered here -->
+        <!-- Orders rendered here with live status -->
       </div>
     </section>
 
@@ -42,6 +41,27 @@
 
   <script>
     const RECENT_ORDERS_EL = document.getElementById('recent-orders');
+    const STATUS_LABELS = {
+      PENDING: 'Placed',
+      PREPARING: 'Preparing',
+      READY: 'Ready',
+      PICKED_UP: 'Picked Up',
+      SERVED: 'Served'
+    };
+    const STATUS_COLORS = {
+      PENDING: 'bg-amber-100 text-amber-900',
+      PREPARING: 'bg-violet-100 text-violet-900',
+      READY: 'bg-sky-100 text-sky-900',
+      PICKED_UP: 'bg-blue-100 text-blue-900',
+      SERVED: 'bg-emerald-100 text-emerald-900'
+    };
+    const STATUS_BG = {
+      PENDING: 'bg-amber-500',
+      PREPARING: 'bg-violet-500',
+      READY: 'bg-sky-500',
+      PICKED_UP: 'bg-blue-500',
+      SERVED: 'bg-emerald-500'
+    };
 
     // Load recent orders from localStorage
     function loadRecentOrders() {
@@ -57,16 +77,17 @@
       const orderCard = document.createElement('div');
       orderCard.className = 'bg-white rounded-xl p-6 border border-amber-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4';
       orderCard.innerHTML = `
-        <div class="flex flex-col gap-1">
+        <div class="flex flex-col gap-2">
           <div class="flex justify-between items-start gap-2">
             <div class="font-bold text-amber-900 text-lg">${order.orderId}</div>
-            <span class="text-xs font-semibold bg-amber-100 text-amber-800 px-2 py-1 rounded-full">Active</span>
+            <span id="status-badge-${order.orderId}" class="text-xs font-bold px-2.5 py-1 rounded-full ${STATUS_BG.PENDING} text-white">Placed</span>
           </div>
-          <div class="text-xs text-amber-600">Items: Placed order</div>
-          <div class="text-xs text-amber-500">Tracking Token: ${order.orderAccessToken ? order.orderAccessToken.substring(0, 12) + '...' : 'N/A'}</div>
-          <div class="text-xs text-amber-400">Total Prep: ~${order.totalPrepTime ? Math.ceil(order.totalPrepTime / 60) : '?'} min</div>
+          <div class="text-xs text-amber-600 mb-1">Tracking Token: <span class="font-mono text-xs truncate">${order.orderAccessToken ? order.orderAccessToken.substring(0, 12) + '...' : 'N/A'}</span></div>
+          <div class="text-xs text-amber-400">Estimated prep: ~${order.totalPrepTime ? Math.ceil(order.totalPrepTime / 60) : '?'} min</div>
         </div>
-        <button onclick="trackOrder('${order.orderId}', '${order.orderAccessToken}')" class="bg-amber-800 hover:bg-amber-900 text-white px-6 py-3 rounded-lg font-semibold transition shadow-md">Track Order</button>
+        <div class="flex gap-2">
+          <button onclick="trackOrder('${order.orderId}', '${order.orderAccessToken}')" class="bg-amber-800 hover:bg-amber-900 text-white px-5 py-2.5 rounded-lg font-semibold transition shadow-md">View Details</button>
+        </div>
       `;
       RECENT_ORDERS_EL.appendChild(orderCard);
     }
@@ -77,7 +98,47 @@
       window.location.href = `order-status.html?orderId=${encodeURIComponent(orderId)}`;
     }
 
-    // Load recent orders on page load
+    // Poll order status from backend
+    async function pollOrderStatus() {
+      const activeOrder = JSON.parse(localStorage.getItem('active_cafe_order') || 'null');
+      if (!activeOrder || !activeOrder.orderId) return;
+
+      const orderId = activeOrder.orderId;
+      const orderToken = sessionStorage.getItem('orderAccessToken') || (activeOrder.orderAccessToken || '');
+
+      try {
+        const res = await CafeApi.get(`/api/orders/${orderId}`);
+        if (res.ok && res.body.success) {
+          const order = res.body.order;
+          const status = order.status;
+
+          // Update status badge
+          const badgeEl = document.getElementById(`status-badge-${orderId}`);
+          if (badgeEl) {
+            badgeEl.textContent = STATUS_LABELS[status] || status;
+            badgeEl.className = `text-xs font-bold px-2.5 py-1 rounded-full ${STATUS_COLORS[status] || 'bg-amber-100 text-amber-900'}`;
+          }
+
+          // If served, stop polling
+          if (status === 'SERVED') {
+            clearInterval(pollTimer);
+          }
+        }
+      } catch (_) {
+        // Silently fail on poll errors
+      }
+    }
+
+    // Poll every POLL_MS
+    let pollTimer = setInterval(pollOrderStatus, POLL_MS);
+    pollOrderStatus(); // Initial call
+
+    // Stop polling when page is unloaded
+    window.addEventListener('beforeunload', () => {
+      clearInterval(pollTimer);
+    });
+
+    // Load initial orders
     loadRecentOrders();
   </script>
 </body>
