@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Daily Grind Café - Kitchen (Chef)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-amber-50 min-h-screen font-sans">
+
+  <header class="sticky top-0 z-40 bg-amber-900 px-4 py-4 text-amber-100 shadow-md sm:px-6">
+    <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <a href="index.html" class="text-lg font-bold tracking-wider">☕ The Daily Grind Café</a>
+        <span class="rounded-full bg-amber-700 px-3 py-1 text-xs font-bold uppercase tracking-wide">Kitchen</span>
+      </div>
+      <nav class="flex flex-wrap items-center gap-4 text-sm font-medium">
+        <a href="menu.html" class="hover:text-amber-300 transition">Menu</a>
+        <a href="track.html" class="hover:text-amber-300 transition">Track Order</a>
+        <span id="user-badge" class="rounded-full border border-amber-600 px-3 py-1 text-xs"></span>
+        <button type="button" id="logout-btn" class="rounded-lg bg-amber-800 px-3 py-1.5 text-xs font-semibold hover:bg-amber-700">Sign out</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+    <div class="mb-6 flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-bold text-amber-900 sm:text-3xl">Kitchen Queue</h1>
+        <p class="text-sm text-amber-700/80">Oldest ticket first. Several orders can be prepared at once.</p>
+      </div>
+      <div class="flex flex-wrap items-center gap-3">
+        <span id="live-indicator" class="flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800">
+          <span class="h-2 w-2 animate-pulse rounded-full bg-emerald-500"></span> Live · 3s
+        </span>
+        <label class="text-xs font-semibold uppercase tracking-wide text-amber-900" for="history-date">History date</label>
+        <input id="history-date" type="date"
+          class="rounded-lg border border-amber-200 bg-white px-3 py-1.5 text-sm text-amber-900 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200">
+        <button type="button" id="refresh-btn"
+          class="rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-sm font-semibold text-amber-900 hover:bg-amber-50">Refresh</button>
+      </div>
+    </div>
+
+    <div id="alert-area" class="mb-4 hidden"></div>
+
+    <section class="mb-6" aria-label="Status counts">
+      <div id="counts" class="grid grid-cols-2 gap-3 sm:grid-cols-5"></div>
+    </section>
+
+    <section class="grid grid-cols-1 gap-6 lg:grid-cols-2" aria-label="Kitchen tickets">
+      <div>
+        <h2 class="mb-3 flex items-center gap-2 text-lg font-bold text-amber-900">
+          <span>🕐</span> Waiting <span id="pending-count" class="rounded-full bg-amber-800 px-2 py-0.5 text-xs text-white">0</span>
+        </h2>
+        <div id="pending-list" class="space-y-3"></div>
+      </div>
+      <div>
+        <h2 class="mb-3 flex items-center gap-2 text-lg font-bold text-amber-900">
+          <span>👨‍🍳</span> Preparing <span id="preparing-count" class="rounded-full bg-orange-600 px-2 py-0.5 text-xs text-white">0</span>
+        </h2>
+        <div id="preparing-list" class="space-y-3"></div>
+      </div>
+    </section>
+
+    <section class="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3" aria-label="Insights">
+      <div class="lg:col-span-2">
+        <h2 class="mb-3 text-lg font-bold text-amber-900">Completed on <span id="history-date-label" class="font-mono text-base">—</span></h2>
+        <div class="overflow-x-auto rounded-2xl border border-amber-200 bg-white p-4 shadow-sm">
+          <table class="w-full min-w-[36rem] text-left text-sm">
+            <thead>
+              <tr class="border-b border-amber-200 text-xs uppercase tracking-wide text-amber-700/80">
+                <th class="py-2 pr-3">Order</th>
+                <th class="py-2 pr-3">Fulfilment</th>
+                <th class="py-2 pr-3">Items</th>
+                <th class="py-2 pr-3">Status</th>
+                <th class="py-2 pr-3 text-right">Total</th>
+                <th class="py-2 text-right">Ready at</th>
+              </tr>
+            </thead>
+            <tbody id="history-body"></tbody>
+          </table>
+        </div>
+      </div>
+      <div>
+        <h2 class="mb-3 text-lg font-bold text-amber-900">Top prepared items</h2>
+        <div id="top-items" class="rounded-2xl border border-amber-200 bg-white p-4 shadow-sm"></div>
+      </div>
+    </section>
+
+    <p id="last-updated" class="mt-6 text-center text-xs text-amber-700/70">—</p>
+  </main>
+
+  <footer class="bg-amber-950 py-4 text-center text-xs text-amber-300/60">
+    &copy; 2026 The Daily Grind Café · Kitchen dashboard
+  </footer>
+
+  <script src="api.js"></script>
+  <script src="ui.js"></script>
+  <script>
+    (function () {
+      'use strict';
+
+      var session = Cafe.guardRole('CHEF');
+      if (!session) return;
+
+      document.getElementById('user-badge').textContent = '👨‍🍳 ' + session.username;
+      document.getElementById('logout-btn').addEventListener('click', function () {
+        Cafe.api.logout().then(function () { location.replace('staff-login.html'); });
+      });
+
+      var alertArea = document.getElementById('alert-area');
+      var pendingList = document.getElementById('pending-list');
+      var preparingList = document.getElementById('preparing-list');
+      var historyBody = document.getElementById('history-body');
+      var topItems = document.getElementById('top-items');
+      var countsBox = document.getElementById('counts');
+      var lastUpdated = document.getElementById('last-updated');
+      var dateInput = document.getElementById('history-date');
+      var historyDateLabel = document.getElementById('history-date-label');
+
+      dateInput.value = Cafe.todayKey();
+
+      var busyOrders = {};
+      var queueLoaded = false;
+      var insightsLoadedFor = null;
+      var tickCount = 0;
+
+      function showAlert(html) {
+        alertArea.className = 'mb-4';
+        alertArea.innerHTML = html;
+      }
+      function clearAlert() {
+        alertArea.className = 'mb-4 hidden';
+        alertArea.innerHTML = '';
+      }
+
+      /** Session gone -> back to sign in. Never fake data. */
+      function handleAuthError(err) {
+        if (err instanceof Cafe.ApiError && err.status === 401) {
+          Cafe.staff.clear();
+          location.replace('staff-login.html');
+          return true;
+        }
+        if (err instanceof Cafe.ApiError && err.status === 403) {
+          showAlert(UI.unauthorized('Your session does not have the CHEF role.'));
+          return true;
+        }
+        return false;
+      }
+
+      /* -------------------------- render -------------------------- */
+
+      function renderQueue(data) {
+        countsBox.innerHTML = UI.countsRow(data.counts);
+        document.getElementById('pending-count').textContent = data.pending.length;
+        document.getElementById('preparing-count').textContent = data.preparing.length;
+
+        if (data.pending.length === 0) {
+          pendingList.innerHTML = UI.empty('✅', 'Nothing waiting', 'Every ticket has been started.');
+        } else {
+          pendingList.innerHTML = data.pending.map(function (order) {
+            return UI.ticket(order, {
+              tone: 'border-amber-300',
+              primary: {
+                label: busyOrders[order.orderId] ? 'Starting…' : 'Start preparing',
+                action: 'start',
+                disabled: !!busyOrders[order.orderId]
+              }
+            });
+          }).join('');
+        }
+
+        if (data.preparing.length === 0) {
+          preparingList.innerHTML = UI.empty('🍳', 'Nothing on the pass', 'Start a waiting ticket to begin preparing.');
+        } else {
+          preparingList.innerHTML = data.preparing.map(function (order) {
+            return UI.ticket(order, {
+              tone: 'border-orange-300',
+              primary: {
+                label: busyOrders[order.orderId] ? 'Saving…' : 'Mark ready',
+                action: 'ready',
+                disabled: !!busyOrders[order.orderId]
+              },
+              note: 'Preparing since ' + Cafe.formatClock(order.timestamps && order.timestamps.preparingAt)
+            });
+          }).join('');
+        }
+
+        lastUpdated.textContent = 'Last updated ' + new Date().toLocaleTimeString();
+      }
+
+      function renderInsights() {
+        var date = dateInput.value || Cafe.todayKey();
+        historyDateLabel.textContent = date;
+
+        Promise.all([Cafe.api.kitchenHistory(date), Cafe.api.topPrepared(date)])
+          .then(function (results) {
+            var history = results[0].orders;
+            var stats = results[1];
+
+            if (history.length === 0) {
+              historyBody.innerHTML = '<tr><td colspan="6" class="py-6 text-center text-amber-700/70">No orders completed on this date.</td></tr>';
+            } else {
+              historyBody.innerHTML = history.map(UI.historyRow).join('');
+            }
+
+            if (stats.items.length === 0) {
+              topItems.innerHTML = '<p class="text-sm text-amber-700/70">No completed items on this date.</p>';
+            } else {
+              var max = stats.items[0].quantity || 1;
+              topItems.innerHTML = '<ul class="space-y-3">' + stats.items.map(function (item) {
+                var width = Math.max(6, Math.round((item.quantity / max) * 100));
+                return '<li>' +
+                  '<div class="flex items-center justify-between text-sm text-amber-900">' +
+                  '<span><span aria-hidden="true">' + Cafe.escapeHtml(item.image || '•') + '</span> ' + Cafe.escapeHtml(item.name) + '</span>' +
+                  '<span class="font-bold">' + item.quantity + '</span></div>' +
+                  '<div class="mt-1 h-2 overflow-hidden rounded-full bg-amber-100">' +
+                  '<div class="h-full rounded-full bg-amber-700" style="width:' + width + '%"></div></div>' +
+                  '</li>';
+              }).join('') + '</ul>' +
+                '<p class="mt-3 text-xs text-amber-700/70">' + stats.ordersCompleted + ' order(s) completed · by item quantity</p>';
+            }
+          })
+          .catch(function (err) {
+            if (handleAuthError(err)) return;
+            historyBody.innerHTML = '<tr><td colspan="6" class="py-6 text-center text-red-700">' +
+              Cafe.escapeHtml(err.friendly ? err.friendly() : 'Could not load history.') + '</td></tr>';
+            topItems.innerHTML = '<p class="text-sm text-red-700">Could not load stats.</p>';
+          });
+      }
+
+      /* -------------------------- polling -------------------------- */
+
+      function loadQueue() {
+        return Cafe.api.kitchenQueue()
+          .then(function (data) {
+            if (!queueLoaded) queueLoaded = true;
+            clearAlert();
+            renderQueue(data);
+          })
+          .catch(function (err) {
+            if (handleAuthError(err)) return;
+            // Keep the last known queue on screen; surface the problem.
+            if (!queueLoaded) {
+              pendingList.innerHTML = UI.loading('Waiting for the kitchen…');
+              preparingList.innerHTML = UI.loading('Waiting for the kitchen…');
+            }
+            showAlert(UI.errorBanner(err.friendly ? err.friendly() : 'Could not reach the kitchen service.',
+              '<button type="button" id="retry-btn" class="rounded-lg border border-red-300 bg-white px-3 py-1.5 font-semibold">Retry</button>'));
+            var retry = document.getElementById('retry-btn');
+            if (retry) retry.addEventListener('click', function () { poller.poke(); });
+          });
+      }
+
+      var poller = Cafe.poll(function () {
+        tickCount += 1;
+        var tasks = [loadQueue()];
+        // Insights refresh every ~12s (or on demand), not on every 3s tick.
+        if (tickCount === 1 || tickCount % 4 === 0) {
+          tasks.push(Promise.resolve().then(renderInsights));
+        }
+        return Promise.all(tasks);
+      }, { intervalMs: Cafe.POLL_INTERVAL_MS });
+
+      /* -------------------------- actions -------------------------- */
+
+      function runAction(orderId, action, button) {
+        busyOrders[orderId] = true;
+        if (button) { button.disabled = true; button.textContent = action === 'start' ? 'Starting…' : 'Saving…'; }
+
+        var call = action === 'start' ? Cafe.api.startOrder(orderId) : Cafe.api.readyOrder(orderId);
+
+        call
+          .then(function () {
+            delete busyOrders[orderId];
+            return poller.poke();
+          })
+          .then(function () {
+            tickCount = 0; // refresh insights with the next tick
+            renderInsights();
+          })
+          .catch(function (err) {
+            delete busyOrders[orderId];
+            if (handleAuthError(err)) return;
+            if (err instanceof Cafe.ApiError && err.status === 409) {
+              // Someone else moved it first — just re-sync.
+              showAlert(UI.errorBanner('That ticket already moved on. The queue has been refreshed.'));
+              poller.poke();
+              return;
+            }
+            showAlert(UI.errorBanner(err.friendly ? err.friendly() : 'That action failed.'));
+            poller.poke();
+          });
+      }
+
+      document.querySelector('main').addEventListener('click', function (event) {
+        var button = event.target.closest('button[data-action]');
+        if (!button) return;
+        if (button.disabled) return;
+        runAction(button.getAttribute('data-order-id'), button.getAttribute('data-action'), button);
+      });
+
+      document.getElementById('refresh-btn').addEventListener('click', function () {
+        poller.poke();
+        renderInsights();
+      });
+      dateInput.addEventListener('change', function () {
+        insightsLoadedFor = null;
+        renderInsights();
+      });
+
+      /* -------------------------- start -------------------------- */
+
+      pendingList.innerHTML = UI.loading('Loading the queue…');
+      preparingList.innerHTML = UI.loading('Loading the queue…');
+      poller.start();
+      renderInsights();
+
+      // Keep "3m ago" labels fresh even between polls.
+      setInterval(function () {
+        var cards = document.querySelectorAll('[data-order-card]');
+        if (cards.length) poller.poke();
+      }, Cafe.POLL_INTERVAL_MS);
+    })();
+  </script>
+</body>
+</html>

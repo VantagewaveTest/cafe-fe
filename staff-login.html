@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Daily Grind Café - Staff Sign In</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-amber-50 min-h-screen flex flex-col font-sans">
+
+  <header class="bg-amber-900 text-amber-100 shadow-md py-4 px-6 flex justify-between items-center">
+    <a href="index.html" class="text-xl font-bold tracking-wider flex items-center gap-2">
+      <span>☕</span> The Daily Grind Café
+    </a>
+    <nav class="space-x-6 text-sm font-medium">
+      <a href="index.html" class="hover:text-amber-300 transition">Home</a>
+      <a href="menu.html" class="hover:text-amber-300 transition">Menu</a>
+      <a href="track.html" class="hover:text-amber-300 transition">Track Order</a>
+      <a href="staff-login.html" class="underline underline-offset-4">Staff</a>
+    </nav>
+  </header>
+
+  <main class="flex-grow flex items-center justify-center px-4 py-12">
+    <div class="w-full max-w-md">
+      <div class="rounded-2xl border border-amber-200 bg-white p-8 shadow-xl">
+        <div class="mb-6 text-center">
+          <div class="text-4xl mb-2">🔐</div>
+          <h1 class="text-2xl font-bold text-amber-900">Staff Sign In</h1>
+          <p class="mt-1 text-sm text-amber-700/80">Chef and waiter dashboards require a staff session.</p>
+        </div>
+
+        <div id="login-alert" class="mb-4 hidden"></div>
+
+        <form id="login-form" class="space-y-4" novalidate>
+          <div>
+            <label for="username" class="mb-1 block text-xs font-bold uppercase tracking-wide text-amber-900">Username</label>
+            <input id="username" name="username" type="text" autocomplete="username" required
+              class="w-full rounded-xl border border-amber-200 px-3 py-2.5 text-sm text-amber-900 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200"
+              placeholder="chef or waiter">
+          </div>
+
+          <div>
+            <label for="password" class="mb-1 block text-xs font-bold uppercase tracking-wide text-amber-900">Password</label>
+            <input id="password" name="password" type="password" autocomplete="current-password" required
+              class="w-full rounded-xl border border-amber-200 px-3 py-2.5 text-sm text-amber-900 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200"
+              placeholder="••••••••">
+          </div>
+
+          <button id="login-btn" type="submit"
+            class="w-full rounded-xl bg-amber-800 py-3 font-semibold text-white shadow-lg transition hover:bg-amber-900 disabled:opacity-50">
+            Sign in
+          </button>
+        </form>
+
+        <div id="signed-in-panel" class="hidden mt-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900"></div>
+
+        <div class="mt-6 rounded-xl border border-amber-100 bg-amber-50 p-4 text-xs text-amber-800">
+          <p class="font-bold uppercase tracking-wide">Demo accounts</p>
+          <p class="mt-1">👨‍🍳 <code class="font-mono">chef</code> / <code class="font-mono">chef123</code> → Kitchen dashboard</p>
+          <p>🛎️ <code class="font-mono">waiter</code> / <code class="font-mono">waiter123</code> → Service dashboard</p>
+          <p class="mt-2 text-amber-700/80">The role is decided by the server, never by this page.</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="bg-amber-950 text-amber-300/60 py-4 text-center text-xs">
+    &copy; 2026 The Daily Grind Café. Freshly brewed with love.
+  </footer>
+
+  <script src="api.js"></script>
+  <script>
+    (function () {
+      var form = document.getElementById('login-form');
+      var button = document.getElementById('login-btn');
+      var alertBox = document.getElementById('login-alert');
+
+      function showError(message) {
+        alertBox.className = 'mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800';
+        alertBox.textContent = message;
+      }
+
+      function dashboardFor(role) {
+        return role === 'CHEF' ? 'chef.html' : 'waiter.html';
+      }
+
+      // Already signed in? Offer to continue instead of logging in twice.
+      var existing = Cafe.staff.get();
+      if (existing) {
+        var panel = document.getElementById('signed-in-panel');
+        panel.classList.remove('hidden');
+        panel.innerHTML = 'Already signed in as <strong>' + Cafe.escapeHtml(existing.username) +
+          '</strong> (' + Cafe.escapeHtml(existing.role) + '). ' +
+          '<a class="font-semibold underline" href="' + dashboardFor(existing.role) + '">Open dashboard</a> · ' +
+          '<button type="button" id="sign-out" class="font-semibold underline">Sign out</button>';
+        document.getElementById('sign-out').addEventListener('click', function () {
+          Cafe.api.logout().then(function () { location.reload(); });
+        });
+      }
+
+      form.addEventListener('submit', function (event) {
+        event.preventDefault();
+        alertBox.className = 'mb-4 hidden';
+        alertBox.textContent = '';
+
+        var username = document.getElementById('username').value.trim();
+        var password = document.getElementById('password').value;
+
+        if (!username || !password) {
+          showError('Enter both your username and password.');
+          return;
+        }
+
+        button.disabled = true;
+        button.textContent = 'Signing in…';
+
+        Cafe.api.login(username, password)
+          .then(function (session) {
+            location.href = dashboardFor(session.role);
+          })
+          .catch(function (err) {
+            if (err instanceof Cafe.ApiError && err.status === 401) {
+              showError('That username or password was not recognised.');
+            } else {
+              showError(err.friendly ? err.friendly() : 'Sign in failed. Please try again.');
+            }
+            button.disabled = false;
+            button.textContent = 'Sign in';
+          });
+      });
+    })();
+  </script>
+</body>
+</html>
