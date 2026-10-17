@@ -61,7 +61,7 @@
           <label class="block text-xs font-bold text-amber-900 uppercase tracking-wide mb-2">Table or Counter Pickup</div>
           <div class="space-y-2 text-sm text-amber-800">
             <label class="flex items-center gap-2.5 p-2.5 rounded-lg border border-amber-200 cursor-pointer hover:bg-amber-50">
-              <input type="radio" name="orderType" value="table" checked class="text-amber-800 focus:ring-amber-700">
+              <input type="radio" name="orderType" value="table" class="text-amber-800 focus:ring-amber-700">
               <span>🍽️ Table Number</span>
             </label>
             <label class="flex items-center gap-2.5 p-2.5 rounded-lg border border-amber-200 cursor-pointer hover:bg-amber-50">
@@ -109,7 +109,7 @@
   <script>
     let cart = JSON.parse(localStorage.getItem('cafe_cart') || '{}');
 
-    function renderCart() {
+    function readCart() {
       const container = document.getElementById('cart-items-container');
       const keys = Object.keys(cart);
 
@@ -139,7 +139,7 @@
               <div class="text-3xl">${item.image || '☕'}</div>
               <div>
                 <h4 class="font-bold text-amber-900">${item.name}</h4>
-                <div class="text-xs text-amber-700">$${item.price.toFixed(2)} each • ⏱️ ${item.prepTime * item.quantity}s prep</div>
+                <div class="text-xs text-amber-700">$${item.price.toFixed(2)} each • ~${item.prepTime * item.quantity}s prep</div>
               </div>
             </div>
             <div class="flex items-center gap-4">
@@ -238,7 +238,7 @@
         const response = await CafeApi.post('/api/orders', {
           items: items.map(i => ({ id: i.id, quantity: i.quantity })),
           paymentMethod: payment,
-          tableNumber: tableNumber
+          tableNumber
         });
         const data = response;
 
@@ -248,7 +248,7 @@
           setActiveOrder({
             orderId: data.body.orderId,
             orderAccessToken: data.body.orderAccessToken,
-            endTime: endTime,
+            endTime,
             celebrated: false,
             tableNumber: tableNumber,
             items: items.map(i => ({ id: i.id, quantity: i.quantity, name: i.name, price: i.price })),
@@ -262,7 +262,7 @@
           allOrders.push({
             orderId: data.body.orderId,
             orderAccessToken: data.body.orderAccessToken,
-            endTime: endTime,
+            endTime,
             tableNumber: tableNumber,
             items: items.map(i => ({ id: i.id, quantity: i.quantity, name: i.name, price: i.price })),
             totalAmount: data.body.totalAmount,

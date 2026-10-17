@@ -31,7 +31,9 @@
     </div>
 
     <div id="orders-container" class="hidden space-y-6">
-      <!-- Orders rendered here -->
+      <div id="orders-list" class="space-y-6">
+        <!-- Orders rendered here -->
+      </div>
     </div>
   </main>
 
@@ -82,8 +84,6 @@
       const container = document.getElementById('orders-container');
       const emptyState = document.getElementById('empty-state');
 
-      console.log('Loading orders:', allOrders);
-
       if (!allOrders || allOrders.length === 0) {
         emptyState.classList.remove('hidden');
         container.classList.add('hidden');
@@ -93,52 +93,28 @@
       emptyState.classList.add('hidden');
       container.classList.remove('hidden');
 
-      container.innerHTML = allOrders.map(order => renderOrderCard(order)).join('');
-
-      startPolling();
+      container.innerHTML = orders.map(order => renderOrderCard(order)).join('');
     }
 
     function renderOrderCard(order) {
       const status = order.status || 'PENDING';
 
-      const currentIndex = STATUS_ORDER_LIST.indexOf(status);
-      let timelineHtml = '';
-      STATUS_ORDER_LIST.forEach((statusItem, idx) => {
-        const completed = idx < currentIndex;
-        const active = idx === currentIndex;
-        const circleClass = completed ? 'bg-emerald-600' : active ? 'bg-amber-600 animate-pulse' : 'bg-amber-200';
-        const lineClass = completed ? 'bg-emerald-600' : 'bg-amber-200';
-        const labelClass = completed ? 'text-emerald-600 font-semibold' : active ? 'text-amber-900 font-semibold' : 'text-amber-400';
-
-        if (idx > 0) {
-          timelineHtml += `<div class="flex-1 h-0.5 ${lineClass} mx-2"></div>`;
-        }
-        timelineHtml += `
-          <div class="flex flex-col items-center">
-            <div class="${circleClass} w-3 h-3 rounded-full mx-auto mb-1"></div>
-            <span class="text-[10px] ${labelClass}">${STATUS_LABELS[statusItem]}</span>
-          </div>
-        `;
-      });
-
       return `
         <div class="bg-white rounded-2xl border-2 border-amber-200 shadow-lg p-6 transition-all duration-500 order-card" id="order-${order.orderId}">
           <div class="flex justify-between items-start mb-6 pb-6 border-b border-amber-200">
-            <div class="flex items-center gap-2">
+            <div>
               <div class="font-bold text-amber-900 text-lg">Order #${order.orderId}</div>
               <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full font-bold text-sm shadow-sm ${statusColorClass(status)}">
                 <span class="w-2.5 h-2.5 rounded-full ${badgeColorClass(status)} animate-pulse"></span>
                 <span id="status-text-${order.orderId}" class="font-bold text-sm">${STATUS_LABELS[status] || status}</span>
               </div>
             </div>
-            <div class="text-right">
-              <div class="text-xs text-amber-500 font-mono">Token: <span class="text-amber-700 font-mono">${order.orderAccessToken ? order.orderAccessToken.substring(0, 12) + '...' : 'N/A'}</span></div>
-            </div>
+            <div class="text-xs text-amber-500 font-mono">Token: <span class="text-amber-700 font-mono">${order.orderAccessToken ? order.orderAccessToken.substring(0, 12) + '...' : 'N/A'}</span></div>
           </div>
 
           <div class="relative mx-auto max-w-md mb-8">
             <div class="tracking-line" style="position: relative;">
-              ${timelineHtml}
+              ${renderTimeline(status)}
               <div id="tracking-char-${order.orderId}" class="tracking-char">🛵</div>
             </div>
           </div>
@@ -173,12 +149,9 @@
             <h3 class="text-sm font-bold text-amber-700 uppercase tracking-wide mb-3">📜 Status History</h3>
             <div id="status-history-${order.orderId}" class="space-y-2">
               ${(order.statusHistory || []).map(h => `
-                <div class="flex items-start gap-3">
-                  <div class="w-6 h-6 rounded-full bg-amber-200 flex items-center justify-center text-xs font-bold text-amber-600">
-                    ${getStatusIcon(h.to)}
-                  </div>
-                  <div class="flex flex-col">
-                    <div class="text-sm font-bold text-amber-900">${STATUS_LABELS[h.to] || h.to}</div>
+                <div class="flex justify-between items-center py-1 border-b border-amber-50 last:border-0">
+                  <div class="flex items-center gap-3">
+                    <div class="text-xs text-amber-600">${STATUS_LABELS[h.to] || h.to}</div>
                     <div class="text-xs text-amber-500">${h.actor || 'system'} • ${new Date(h.at).toLocaleTimeString()}</div>
                   </div>
                 </div>
@@ -196,27 +169,48 @@
     }
 
     function statusColorClass(status) {
-      return STATUS_COLORS[status] || 'bg-amber-100 text-amber-900';
+      const colors = {
+        PENDING: 'bg-amber-100 text-amber-900',
+        PREPARING: 'bg-violet-100 text-violet-900',
+        READY: 'bg-sky-100 text-sky-900',
+        PICKED_UP: 'bg-blue-100 text-blue-900',
+        SERVED: 'bg-emerald-100 text-emerald-900'
+      };
+      return statusColors[status] || 'bg-amber-100 text-amber-900';
     }
 
     function badgeColorClass(status) {
-      return STATUS_BADGE_COLORS[status] || 'bg-amber-500';
+      const colors = {
+        PENDING: 'bg-amber-500',
+        PREPARING: 'bg-violet-500',
+        READY: 'bg-sky-500',
+        PICKED_UP: 'bg-blue-500',
+        SERVED: 'bg-emerald-500'
+      };
+      return badgeColors[status] || 'bg-amber-500';
     }
 
-    function renderTimelineWithOrderId(orderId, currentStatus) {
-      const currentIndex = STATUS_ORDER_LIST.indexOf(currentStatus);
-      STATUS_ORDER_LIST.forEach((status, idx) => {
-        const circle = document.getElementById(`step-${orderId}-${status.toLowerCase()}`);
-        if (circle) {
-          if (idx < currentIndex) {
-            circle.className = 'w-3 h-3 rounded-full bg-emerald-600 mx-auto shadow';
-          } else if (idx === currentIndex) {
-            circle.className = 'w-3 h-3 rounded-full bg-amber-600 mx-auto shadow animate-pulse';
-          } else {
-            circle.className = 'w-3 h-3 rounded-full bg-amber-200 mx-auto';
-          }
-        }
-      });
+    function getItemEmoji(name) {
+      const nameLower = name.toLowerCase();
+      if (nameLower.includes('coffee') || nameLower.includes('espresso') || nameLower.includes('macchiato') || nameLower.includes('cold brew') || nameLower.includes('cappuccino') || nameLower.includes('americano') || nameLower.includes('mocha') || nameLower.includes('ristretto')) return '☕';
+      if (nameLower.includes('tea') || nameLower.includes('chai') || nameLower.includes('green tea')) return '🍵';
+      if (nameLower.includes('waffle')) return '🧇';
+      if (nameLower.includes('cake') || nameLower.includes('velvet') || nameLower.includes('cheesecake') || nameLower.includes('lava')) return '🍰';
+      if (nameLower.includes('croissant') || nameLower.includes('cookie') || nameLower.includes('biscotti') || nameLower.includes('tart')) return '🥐';
+      if (nameLower.includes('sandwich') || nameLower.includes('wrap')) return '🥪';
+      if (nameLower.includes('juice') || nameLower.includes('drink')) return '🥤';
+      return '🍽️';
+    }
+
+    function getStatusIcon(status) {
+      switch(status) {
+        case 'PENDING': return '📝';
+        case 'PREPARING': return '👨‍🍳';
+        case 'READY': return '🍽️';
+        case 'PICKED_UP': return '🚚';
+        case 'SERVED': return '✅';
+        default: return '•';
+      }
     }
 
     async function pollOrderStatus() {
@@ -225,21 +219,26 @@
 
       for (const order of allOrders) {
         try {
-          const res = await CafeApi.get(`/api/orders/${order.orderId}`);
+          const r = await CafeApi.get(`/api/orders/${order.orderId}`);
           if (res.ok && res.body.success) {
-            const orderData = res.body.order;
+            const dataOrder = res.body.order;
             const newStatus = dataOrder.status;
+            const currentStatus = order.status;
 
-            if (newStatus !== order.status) {
+            if (newStatus !== currentStatus) {
               order.status = newStatus;
               order.statusHistory = dataOrder.statusHistory || order.statusHistory;
+              order.items = dataOrder.items || order.items;
+              order.totalAmount = dataOrder.totalAmount;
+              order.tableNumber = dataOrder.tableNumber;
+              order.pickedUpAt = dataOrder.pickedUpAt;
+              order.readyAt = dataOrder.readyAt;
+              order.expectedDeliveredAt = dataOrder.expectedDeliveredAt;
               localStorage.setItem('all_orders', JSON.stringify(allOrders));
               updateOrderCard(order.orderId, newStatus);
             }
           }
-        } catch (_) {
-          // Silently fail
-        }
+        } catch (_) {}
       }
     }
 
