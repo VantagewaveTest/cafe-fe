@@ -36,6 +36,19 @@ and the API both behave normally.
 
 Demo staff accounts: `chef` / `chef123` and `waiter` / `waiter123`.
 
+## Test
+
+```bash
+npm test                  # node --test — 34 passing, no dependencies
+```
+
+The suite loads the real `api.js` / `ui.js` into a VM with a fake `window` and a
+recording `fetch`, so it checks the shipping files (contract conformance, typed
+errors, role guarding and HTML escaping) rather than re-implementing them.
+
+Recorded results: [`TEST_RESULTS.md`](./TEST_RESULTS.md) · demo:
+[`DEMO.md`](./DEMO.md).
+
 ## How tracking works
 
 * Checkout returns `orderId` **and** a private `trackingToken`. Both are stored in
