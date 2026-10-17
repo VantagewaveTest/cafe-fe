@@ -22,7 +22,6 @@
   </header>
 
   <main class="flex-grow max-w-5xl w-full mx-auto px-4 py-8 space-y-8">
-    <!-- Empty State -->
     <div id="empty-state" class="text-center py-16">
       <div class="text-4xl mb-4">📭</div>
       <h3 class="text-lg font-bold text-amber-900 mb-2">No recent orders</h3>
@@ -30,9 +29,8 @@
       <a href="cart.html" class="bg-amber-800 hover:bg-amber-900 text-white px-6 py-3 rounded-lg font-semibold transition inline-block">Place Order</a>
     </div>
 
-    <!-- Orders Container -->
     <div id="orders-container" class="hidden space-y-6">
-      <!-- Orders rendered here -->
+      <div id="orders-list" class="space-y-6"></div>
     </div>
   </main>
 
@@ -78,8 +76,19 @@
       return '🍽️';
     }
 
+    function getStatusIcon(status) {
+      switch(status) {
+        case 'PENDING': return '📝';
+        case 'PREPARING': return '👨‍🍳';
+        case 'READY': return '🍽️';
+        case 'PICKED_UP': return '🚚';
+        case 'SERVED': return '✅';
+        default: return '•';
+      }
+    }
+
     function loadOrders() {
-      const orders = JSON.parse(localStorage.getItem('all_orders') || '[]');
+      const allOrders = JSON.parse(localStorage.getItem('all_orders') || '[]');
       const container = document.getElementById('orders-container');
       const emptyState = document.getElementById('empty-state');
 
@@ -95,9 +104,6 @@
       container.classList.remove('hidden');
 
       container.innerHTML = allOrders.map(order => renderOrderCard(order)).join('');
-
-      // Start polling
-      startPolling();
     }
 
     function renderOrderCard(order) {
@@ -207,15 +213,18 @@
         try {
           const res = await CafeApi.get(`/api/orders/${order.orderId}`);
           if (res.ok && res.body.success) {
-            const dataOrder = res.body.order;
-            const newStatus = dataOrder.status;
+            const newStatus = res.body.order.status;
+            const currentStatus = order.status;
 
-            if (newStatus !== order.status) {
+            if (newStatus !== currentStatus) {
               order.status = newStatus;
-              order.statusHistory = dataOrder.statusHistory || order.statusHistory;
-              order.items = dataOrder.items || order.items;
-              order.totalAmount = dataOrder.totalAmount;
-              order.tableNumber = dataOrder.tableNumber;
+              order.statusHistory = res.body.order.statusHistory || order.statusHistory;
+              order.items = res.body.order.items || order.items;
+              order.totalAmount = res.body.order.totalAmount;
+              order.tableNumber = res.body.order.tableNumber;
+              order.pickedUpAt = res.body.order.pickedUpAt;
+              order.readyAt = res.body.order.readyAt;
+              order.expectedDeliveredAt = res.body.order.expectedDeliveredAt;
               localStorage.setItem('all_orders', JSON.stringify(allOrders));
               updateOrderCard(order.orderId, newStatus);
             }
