@@ -31,12 +31,10 @@
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-      <!-- Cart Items -->
       <div id="cart-items-container" class="md:col-span-2 space-y-4">
-        <!-- Rendered dynamically -->
+        <!-- Cart items rendered here -->
       </div>
 
-      <!-- Checkout -->
       <div class="bg-white rounded-2xl p-6 shadow-md border border-amber-200 h-fit space-y-6">
         <h2 class="text-lg font-bold text-amber-900 mb-4 pb-2 border-b border-amber-100">Order Summary</h2>
 
@@ -59,7 +57,6 @@
           </div>
         </div>
 
-        <!-- Table / Counter -->
         <div class="space-y-3">
           <label class="block text-xs font-bold text-amber-900 uppercase tracking-wide mb-2">Table or Counter Pickup</div>
           <div class="space-y-2 text-sm text-amber-800">
@@ -94,7 +91,7 @@
           </div>
         </div>
 
-        <button id="checkout-btn" onclick="placeOrder()" class="w-full bg-amber-800 hover:bg-amber-900 text-white py-3 rounded-xl font-bold shadow-lg transition flex items-center justify-center gap-2">
+        <button id="checkout-btn" onclick="placeOrder()" class="w-auto bg-amber-800 hover:bg-amber-900 text-white py-2 rounded-lg font-semibold shadow-lg transition flex items-center justify-center gap-2">
           Pay & Place Order
         </button>
         <p id="checkout-status" class="text-xs text-center text-amber-600 hidden"></p>
@@ -142,7 +139,7 @@
               <div class="text-3xl">${item.image || '☕'}</div>
               <div>
                 <h4 class="font-bold text-amber-900">${item.name}</h4>
-                <div class="text-xs text-amber-700">$${item.price.toFixed(2)} each • ⏱️ ${item.prepTime * item.quantity}s prep</div>
+                <div class="text-xs text-amber-700">$${item.price.toFixed(2)} each • ~${item.prepTime * item.quantity}s prep</div>
               </div>
             </div>
             <div class="flex items-center gap-4">
@@ -209,7 +206,6 @@
       const tableInput = document.getElementById('tableInput').value.trim();
       const payment = document.querySelector('input[name="payment"]:checked').value;
 
-      // Validate table number when Table option is selected
       if (orderType === 'table' && !tableInput) {
         const status = document.getElementById('checkout-status');
         status.textContent = '❌ Please enter a table number before placing order.';

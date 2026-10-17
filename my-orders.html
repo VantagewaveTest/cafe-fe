@@ -22,7 +22,6 @@
   </header>
 
   <main class="flex-grow max-w-5xl w-full mx-auto px-4 py-8 space-y-8">
-
     <!-- Empty State -->
     <div id="empty-state" class="text-center py-16">
       <div class="text-4xl mb-4">📭</div>
@@ -79,21 +78,12 @@
       return '🍽️';
     }
 
-    function getStatusIcon(status) {
-      switch(status) {
-        case 'PENDING': return '📝';
-        case 'PREPARING': return '👨‍🍳';
-        case 'READY': return '🍽️';
-        case 'PICKED_UP': return '🚚';
-        case 'SERVED': return '✅';
-        default: return '•';
-      }
-    }
-
     function loadOrders() {
-      const allOrders = JSON.parse(localStorage.getItem('all_orders') || '[]');
+      const orders = JSON.parse(localStorage.getItem('all_orders') || '[]');
       const container = document.getElementById('orders-container');
       const emptyState = document.getElementById('empty-state');
+
+      console.log('Loading orders:', allOrders);
 
       if (!allOrders || allOrders.length === 0) {
         emptyState.classList.remove('hidden');
@@ -137,31 +127,26 @@
 
       return `
         <div class="bg-white rounded-2xl border-2 border-amber-200 shadow-lg p-6 transition-all duration-500 order-card" id="order-${order.orderId}">
-          <!-- Status Header -->
           <div class="flex justify-between items-start mb-6 pb-6 border-b border-amber-200">
             <div>
               <div class="flex items-center gap-2">
                 <div class="font-bold text-amber-900 text-lg">Order #${order.orderId}</div>
-                <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full font-bold text-sm shadow-sm ${statusColorClass(status)}">
+                <span id="status-pill-${order.orderId}" class="inline-flex items-center gap-2 px-4 py-2 rounded-full font-bold text-sm shadow-sm ${statusColorClass(status)}">
                   <span class="w-2.5 h-2.5 rounded-full ${badgeColorClass(status)} animate-pulse"></span>
                   <span id="status-text-${order.orderId}" class="font-bold text-sm">${STATUS_LABELS[status] || status}</span>
                 </div>
               </div>
-              <div class="text-right">
-                <div class="text-xs text-amber-500 font-mono">Token: <span class="text-amber-700 font-mono">${order.orderAccessToken ? order.orderAccessToken.substring(0, 12) + '...' : 'N/A'}</span></div>
-              </div>
+              <div class="text-xs text-amber-500 font-mono">Token: <span class="text-amber-700 font-mono">${order.orderAccessToken ? order.orderAccessToken.substring(0, 12) + '...' : 'N/A'}</span></div>
             </div>
           </div>
 
-          <!-- Timeline -->
           <div class="relative mx-auto max-w-md mb-8">
             <div class="tracking-line" style="position: relative;">
               ${timelineHtml}
-              <div class="tracking-char" id="tracking-char-${order.orderId}">🛵</div>
+              <div id="tracking-char-${order.orderId}" class="tracking-char">🛵</div>
             </div>
           </div>
 
-          <!-- Order Items -->
           <div class="bg-white rounded-xl p-6 border border-amber-200">
             <h3 class="text-sm font-bold text-amber-700 uppercase tracking-wide mb-3">☕ Order Items</h3>
             <div id="order-items-${order.orderId}" class="space-y-2">
@@ -177,7 +162,6 @@
             </div>
           </div>
 
-          <!-- Order Info -->
           <div class="grid grid-cols-2 gap-4 mt-6">
             <div class="bg-amber-50 rounded-xl p-4 border border-amber-100">
               <div class="text-xs font-bold text-amber-600 uppercase tracking-wide mb-1">🍽️ Table / Counter</div>
@@ -189,7 +173,6 @@
             </div>
           </div>
 
-          <!-- Status History -->
           <div class="mt-6">
             <h3 class="text-sm font-bold text-amber-700 uppercase tracking-wide mb-3">📜 Status History</h3>
             <div id="status-history-${order.orderId}" class="space-y-2">
@@ -207,7 +190,6 @@
             </div>
           </div>
 
-          <!-- Celebration -->
           <div id="celebration-${order.orderId}" class="hidden text-center py-6">
             <div class="text-6xl mb-2">🎉</div>
             <h3 class="text-xl font-bold text-emerald-700 mb-1">Order Served!</h3>
@@ -215,14 +197,6 @@
           </div>
         </div>
       `;
-    }
-
-    function statusColorClass(status) {
-      return STATUS_COLORS[status] || 'bg-amber-100 text-amber-900';
-    }
-
-    function badgeColorClass(status) {
-      return STATUS_BADGE_COLORS[status] || 'bg-amber-500';
     }
 
     async function pollOrderStatus() {
@@ -233,12 +207,15 @@
         try {
           const res = await CafeApi.get(`/api/orders/${order.orderId}`);
           if (res.ok && res.body.success) {
-            const newStatus = res.body.order.status;
-            const currentStatus = order.status;
+            const dataOrder = res.body.order;
+            const newStatus = dataOrder.status;
 
-            if (newStatus !== currentStatus) {
+            if (newStatus !== order.status) {
               order.status = newStatus;
-              order.statusHistory = res.body.order.statusHistory || order.statusHistory;
+              order.statusHistory = dataOrder.statusHistory || order.statusHistory;
+              order.items = dataOrder.items || order.items;
+              order.totalAmount = dataOrder.totalAmount;
+              order.tableNumber = dataOrder.tableNumber;
               localStorage.setItem('all_orders', JSON.stringify(allOrders));
               updateOrderCard(order.orderId, newStatus);
             }
