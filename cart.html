@@ -3,13 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>The Daily Grind Café - Cart & Checkout</title>
+  <title>Cart & Checkout — The Daily Grind Café</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="config.js"></script>
+  <script src="api.js"></script>
+  <script src="app.js"></script>
 </head>
-<body class="bg-amber-50 min-h-screen flex flex-col justify-between font-sans pt-12">
+<body class="bg-amber-50 min-h-screen flex flex-col font-sans pt-12">
 
-  <!-- Header -->
-  <header class="bg-amber-900 text-amber-100 shadow-md py-4 px-6 flex justify-between items-center fixed top-0 left-0 right-0 z-40">
+  <header class="bg-amber-900 text-amber-100 shadow-md py-4 px-6 flex justify-between items-center sticky top-0 z-40">
     <div class="text-xl font-bold tracking-wider flex items-center gap-2">
       <span>☕</span> The Daily Grind Café
     </div>
@@ -17,26 +19,25 @@
       <a href="index.html" class="hover:text-amber-300 transition">Home</a>
       <a href="menu.html" class="hover:text-amber-300 transition">Menu</a>
       <a href="cart.html" class="underline underline-offset-4">Cart</a>
+      <a href="staff-login.html" class="hover:text-amber-300 transition">Staff Login</a>
+      <a href="my-orders.html" class="hover:text-amber-300 transition">My Orders</a>
     </nav>
   </header>
 
-  <!-- Main Content -->
   <main class="flex-grow max-w-4xl w-full mx-auto px-4 py-8 mb-12">
     <div class="mb-6 flex justify-between items-center">
-      <h1 class="text-3xl font-bold text-amber-900">Your Café Cart</h1>
-      <a href="menu.html" class="text-amber-800 hover:text-amber-900 font-medium text-sm underline">← Back to Menu</a>
+      <h1 class="text-3xl font-bold text-amber-900">Your Cafe Cart</h1>
+      <a href="menu.html" class="text-amber-800 hover:text-amber-900 font-medium text-sm underline">&larr; Back to Menu</a>
     </div>
 
-    <div id="cart-content" class="grid grid-cols-1 md:grid-cols-3 gap-8">
-      <!-- Items list -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
       <div id="cart-items-container" class="md:col-span-2 space-y-4">
-        <!-- Rendered dynamically -->
+        <!-- Cart items rendered here -->
       </div>
 
-      <!-- Summary & Checkout -->
-      <div class="bg-white rounded-2xl p-6 shadow-md border border-amber-200 h-fit">
+      <div class="bg-white rounded-2xl p-6 shadow-md border border-amber-200 h-fit space-y-6">
         <h2 class="text-lg font-bold text-amber-900 mb-4 pb-2 border-b border-amber-100">Order Summary</h2>
-        
+
         <div class="space-y-3 text-sm text-amber-800 mb-6">
           <div class="flex justify-between">
             <span>Subtotal:</span>
@@ -56,8 +57,24 @@
           </div>
         </div>
 
-        <div class="mb-6">
-          <label class="block text-xs font-bold text-amber-900 uppercase tracking-wide mb-2">Payment Option (Simulation)</label>
+        <div class="space-y-3">
+          <label class="block text-xs font-bold text-amber-900 uppercase tracking-wide mb-2">Table or Counter Pickup</div>
+          <div class="space-y-2 text-sm text-amber-800">
+            <label class="flex items-center gap-2.5 p-2.5 rounded-lg border border-amber-200 cursor-pointer hover:bg-amber-50">
+              <input type="radio" name="orderType" value="table" class="text-amber-800 focus:ring-amber-700">
+              <span>🍽️ Table Number</span>
+            </label>
+            <label class="flex items-center gap-2.5 p-2.5 rounded-lg border border-amber-200 cursor-pointer hover:bg-amber-50">
+              <input type="radio" name="orderType" value="counter" class="text-amber-800 focus:ring-amber-700">
+              <span>🏪 Counter Pickup</span>
+            </label>
+          </div>
+          <input id="tableInput" type="number" min="1" max="20" placeholder="Table no. e.g. 6" class="w-full border border-amber-300 rounded-lg px-3 py-2 text-sm bg-amber-50 focus:ring-2 focus:ring-amber-500 outline-none" />
+        </div>
+
+        <div class="space-y-3">
+          <label class="block text-xs font-bold text-amber-900 uppercase tracking-wide mb-2">Payment Option (Simulated)</label>
+          <p class="text-xs text-amber-600">No real charge — this is a demonstration only.</p>
           <div class="space-y-2 text-sm text-amber-800">
             <label class="flex items-center gap-2.5 p-2.5 rounded-lg border border-amber-200 cursor-pointer hover:bg-amber-50">
               <input type="radio" name="payment" value="card" checked class="text-amber-800 focus:ring-amber-700">
@@ -74,23 +91,25 @@
           </div>
         </div>
 
-        <button id="checkout-btn" onclick="placeOrder()" class="w-full bg-amber-800 hover:bg-amber-900 text-white py-3.5 rounded-xl font-semibold shadow-lg transition flex items-center justify-center gap-2">
+        <button id="checkout-btn" onclick="placeOrder()" class="w-auto bg-amber-800 hover:bg-amber-900 text-white py-2 rounded-xl font-semibold shadow-lg transition flex items-center justify-center gap-2">
           Pay & Place Order
         </button>
+        <p id="checkout-status" class="text-xs text-center text-amber-600 hidden"></p>
       </div>
     </div>
   </main>
 
-  <!-- Footer -->
   <footer class="bg-amber-950 text-amber-300/60 py-4 text-center text-xs">
     &copy; 2026 The Daily Grind Café. Freshly brewed with love.
   </footer>
 
+  <script src="config.js"></script>
+  <script src="api.js"></script>
   <script src="app.js"></script>
   <script>
-    let cart = JSON.parse(localStorage.getItem('cafe_cart')) || {};
+    let cart = JSON.parse(localStorage.getItem('cafe_cart') || '{}');
 
-    function renderCart() {
+    function readCart() {
       const container = document.getElementById('cart-items-container');
       const keys = Object.keys(cart);
 
@@ -100,7 +119,7 @@
             <div class="text-5xl mb-3">🛒</div>
             <h3 class="text-xl font-bold text-amber-900 mb-2">Your cart is empty</h3>
             <p class="text-amber-700 text-sm mb-6">Looks like you haven't added any treats yet.</p>
-            <a href="menu.html" class="bg-amber-800 hover:bg-amber-900 text-white px-6 py-3 rounded-xl font-medium inline-block shadow transition">Browse Menu</a>
+            <a href="menu.html" class="bg-amber-800 hover:bg-amber-900 text-white px-6 py-3 rounded-lg font-medium inline-block shadow transition">Browse Menu</a>
           </div>
         `;
         document.getElementById('summary-subtotal').textContent = '$0.00';
@@ -120,7 +139,7 @@
               <div class="text-3xl">${item.image || '☕'}</div>
               <div>
                 <h4 class="font-bold text-amber-900">${item.name}</h4>
-                <p class="text-xs text-amber-700">$${item.price.toFixed(2)} each • ⏱️ ${item.prepTime * item.quantity}s prep</p>
+                <div class="text-xs text-amber-700">$${item.price.toFixed(2)} each • ~${item.prepTime * item.quantity}s prep</div>
               </div>
             </div>
             <div class="flex items-center gap-4">
@@ -176,48 +195,108 @@
     async function placeOrder() {
       const items = Object.values(cart);
       if (items.length === 0) {
-        alert('Your cart is empty.');
+        const status = document.getElementById('checkout-status');
+        status.textContent = 'Your cart is empty.';
+        status.classList.remove('hidden');
+        status.classList.add('text-red-600');
         return;
       }
 
-      let subtotal = items.reduce((sum, i) => sum + (i.price * i.quantity), 0);
-      let totalAmount = subtotal + (subtotal * 0.05);
+      const orderType = document.querySelector('input[name="orderType"]:checked').value;
+      const tableInput = document.getElementById('tableInput').value.trim();
+      const payment = document.querySelector('input[name="payment"]:checked').value;
+
+      if (orderType === 'table' && !tableInput) {
+        const status = document.getElementById('checkout-status');
+        status.textContent = '❌ Please enter a table number before placing order.';
+        status.classList.remove('hidden');
+        status.classList.add('text-red-600');
+        document.getElementById('tableInput').focus();
+        document.getElementById('tableInput').classList.add('border-red-500', 'ring-2', 'ring-red-500');
+        document.getElementById('tableInput').addEventListener('input', function() {
+          this.classList.remove('border-red-500', 'ring-2', 'ring-red-500');
+        }, { once: true });
+        return;
+      } else {
+        document.getElementById('tableInput').classList.remove('border-red-500', 'ring-2', 'ring-red-500');
+      }
+
+      let tableNumber = '';
+      if (orderType === 'table' && tableInput) {
+        tableNumber = `Table ${tableInput}`;
+      } else if (orderType === 'counter') {
+        tableNumber = 'Counter Pickup';
+      }
 
       const btn = document.getElementById('checkout-btn');
+      const status = document.getElementById('checkout-status');
       btn.textContent = 'Processing Payment...';
       btn.disabled = true;
+      status.classList.add('hidden');
 
       try {
-        const response = await fetch(`${API_BASE}/orders`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ items, totalAmount })
+        const response = await CafeApi.post('/api/orders', {
+          items: items.map(i => ({ id: i.id, quantity: i.quantity })),
+          paymentMethod: payment,
+          tableNumber
         });
-        const data = await response.json();
+        const data = response;
 
-        if (data.success) {
-          // Set active order in localStorage with end timestamp
-          const endTime = Date.now() + (data.totalPrepTime * 1000);
+        if (data.ok && data.body.success) {
+          const endTime = Date.now() + (data.body.totalPrepTime * 1000);
+
           setActiveOrder({
-            orderId: data.orderId,
+            orderId: data.body.orderId,
+            orderAccessToken: data.body.orderAccessToken,
             endTime,
-            celebrated: false
+            celebrated: false,
+            tableNumber: tableNumber,
+            items: items.map(i => ({ id: i.id, quantity: i.quantity, name: i.name, price: i.price })),
+            totalAmount: data.body.totalAmount,
+            status: 'PENDING'
           });
 
-          // Clear cart
+          sessionStorage.setItem('orderAccessToken', data.body.orderAccessToken);
+
+          const allOrders = JSON.parse(localStorage.getItem('all_orders') || '[]');
+          allOrders.push({
+            orderId: data.body.orderId,
+            orderAccessToken: data.body.orderAccessToken,
+            endTime,
+            tableNumber: tableNumber,
+            items: items.map(i => ({ id: i.id, quantity: i.quantity, name: i.name, price: i.price })),
+            totalAmount: data.body.totalAmount,
+            status: 'PENDING',
+            createdAt: new Date().toISOString()
+          });
+          localStorage.setItem('all_orders', JSON.stringify(allOrders));
+
           localStorage.removeItem('cafe_cart');
           cart = {};
 
-          alert('Payment Successful! Order placed successfully.');
-          window.location.href = 'menu.html';
+          status.textContent = '✅ Payment simulated! Order #' + data.body.orderId + ' placed successfully.';
+          status.classList.remove('hidden');
+          status.classList.add('text-green-600', 'font-bold', 'animate-bounce');
+
+          btn.textContent = 'Redirecting to My Orders...';
+          btn.disabled = true;
+          btn.classList.add('opacity-50', 'cursor-not-allowed');
+
+          setTimeout(() => {
+            window.location.href = 'my-orders.html';
+          }, 2000);
         } else {
-          alert('Failed to place order: ' + data.message);
+          status.textContent = 'Failed to place order: ' + (data.body.message || 'unknown error');
+          status.classList.remove('hidden');
+          status.classList.add('text-red-600');
           btn.textContent = 'Pay & Place Order';
           btn.disabled = false;
         }
       } catch (err) {
         console.error('Checkout error:', err);
-        alert('Network error connecting to backend. Please make sure cafe-be is running.');
+        status.textContent = 'Network error connecting to backend. Please make sure cafe-be is running.';
+        status.classList.remove('hidden');
+        status.classList.add('text-red-600');
         btn.textContent = 'Pay & Place Order';
         btn.disabled = false;
       }

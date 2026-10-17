@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Waiter Dashboard — The Daily Grind Café</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-amber-50 min-h-screen font-sans">
+
+  <!-- Header -->
+  <header class="bg-amber-900 text-amber-100 shadow-md py-4 px-6 flex justify-between items-center sticky top-0 z-30">
+    <div class="flex items-center gap-3">
+      <a href="index.html" class="text-sm text-amber-200 hover:text-amber-100 transition">← Back</a>
+      <div class="text-xl font-bold">Waiter Dashboard</div>
+    </div>
+    <div class="flex items-center gap-4">
+      <span id="user-badge" class="text-xs text-amber-200 bg-amber-800 px-2 py-1 rounded-full"></span>
+      <button id="logout-btn" class="text-sm text-amber-200 hover:text-amber-100 transition underline">Logout</button>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-6xl mx-auto w-full px-4 py-6 space-y-6">
+    <!-- Status Counts -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="bg-white rounded-2xl p-4 border border-amber-200">
+        <div class="text-xs text-amber-600 uppercase tracking-wide mb-1">Preparing</div>
+        <div id="stat-preparing" class="text-2xl font-extrabold text-amber-900">0</div>
+      </div>
+      <div class="bg-white rounded-2xl p-4 border border-amber-200">
+        <div class="text-xs text-amber-600 uppercase tracking-wide mb-1">Ready for Pickup</div>
+        <div id="stat-ready" class="text-2xl font-extrabold text-amber-900">0</div>
+      </div>
+      <div class="bg-white rounded-2xl p-4 border border-emerald-200">
+        <div class="text-xs text-emerald-600 uppercase tracking-wide mb-1">Picked Up to Serve</div>
+        <div id="stat-picked-up" class="text-2xl font-extrabold text-emerald-900">0</div>
+      </div>
+    </div>
+
+    <!-- Waiter Queues -->
+    <div class="bg-white rounded-2xl p-6 border border-amber-200 space-y-4">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg font-bold text-amber-900">Service Queues</h2>
+        <span class="text-xs text-amber-500">Auto-updates every 3 seconds</span>
+      </div>
+
+      <!-- Preparing Queue -->
+      <div class="space-y-3">
+        <h3 class="text-xs font-bold text-amber-600 uppercase tracking-wide mb-2">Preparing (Kitchen)</h3>
+        <div id="preparing-queue" class="space-y-3">
+          <!-- Rendered here -->
+        </div>
+      </div>
+
+      <!-- Ready Queue -->
+      <div class="space-y-3 mt-4">
+        <h3 class="text-xs font-bold text-amber-600 uppercase tracking-wide mb-2">Ready for Pickup</h3>
+        <div id="ready-queue" class="space-y-3">
+          <!-- Rendered here -->
+        </div>
+      </div>
+
+      <!-- Picked Up Queue -->
+      <div class="space-y-3 mt-4">
+        <h3 class="text-xs font-bold text-emerald-600 uppercase tracking-wide mb-2">Picked Up - Ready to Serve</h3>
+        <div id="picked-up-queue" class="space-y-3">
+          <!-- Rendered here -->
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-amber-950 text-amber-300/60 py-4 text-center text-xs">
+    &copy; 2026 The Daily Grind Café. Freshly brewed with love.
+  </footer>
+
+  <script src="config.js"></script>
+  <script src="api.js"></script>
+  <script>
+    const role = sessionStorage.getItem('staffRole');
+    const token = sessionStorage.getItem('staffToken');
+
+    if (!token || role !== 'WAITER') {
+      window.location.href = 'staff-login.html';
+    }
+
+    document.getElementById('user-badge').textContent = `WAITER · ${sessionStorage.getItem('staffUsername')}`;
+    document.getElementById('logout-btn').addEventListener('click', () => {
+      sessionStorage.clear();
+      window.location.href = 'index.html';
+    });
+
+    let pollTimer = null;
+
+    async function fetchOrders() {
+      const res = await CafeApi.get('/waiter/orders');
+      if (!res.ok) {
+        if (res.status === 401) {
+          sessionStorage.clear();
+          window.location.href = 'staff-login.html';
+        }
+        return;
+      }
+
+      const { preparing, ready, pickedUp, counts } = res.body;
+
+      document.getElementById('stat-preparing').textContent = counts.preparing;
+      document.getElementById('stat-ready').textContent = counts.ready;
+      document.getElementById('stat-picked-up').textContent = counts.pickedUp;
+
+      function getItemEmoji(name) {
+        const nameLower = name.toLowerCase();
+        if (nameLower.includes('coffee') || nameLower.includes('espresso') || nameLower.includes('macchiato') || nameLower.includes('cold brew') || nameLower.includes('cappuccino') || nameLower.includes('americano') || nameLower.includes('mocha') || nameLower.includes('ristretto')) return '☕';
+        if (nameLower.includes('tea') || nameLower.includes('chai') || nameLower.includes('green tea')) return '🍵';
+        if (nameLower.includes('waffle')) return '🧇';
+        if (nameLower.includes('cake') || nameLower.includes('velvet') || nameLower.includes('cheesecake') || nameLower.includes('lava')) return '🍰';
+        if (nameLower.includes('croissant') || nameLower.includes('cookie') || nameLower.includes('biscotti') || nameLower.includes('tart')) return '🥐';
+        if (nameLower.includes('sandwich') || nameLower.includes('wrap')) return '🥪';
+        if (nameLower.includes('juice') || nameLower.includes('tea') || nameLower.includes('drink')) return '🥤';
+        return '🍽️';
+      }
+
+      // Render preparing queue
+      const prepEl = document.getElementById('preparing-queue');
+      if (preparing.length === 0) {
+        prepEl.innerHTML = '<p class="text-amber-500 text-xs text-center py-4">No orders currently preparing.</p>';
+      } else {
+        prepEl.innerHTML = preparing.map(order => `
+          <div class="bg-amber-50 rounded-xl p-4 border border-amber-200 flex justify-between items-center">
+            <div>
+              <div class="font-bold text-amber-900">${order.orderId}</div>
+              <div class="text-xs text-amber-600">${order.tableNumber || 'Counter'} • ${order.items.map(i => getItemEmoji(i.name) + ' ' + i.quantity + '× ' + i.name).join(', ')}</div>
+              <div class="text-xs text-amber-500">Started ${new Date(order.preparingAt || order.createdAt).toLocaleTimeString()}</div>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      // Render ready queue (for pickup)
+      const readyEl = document.getElementById('ready-queue');
+      if (ready.length === 0) {
+        readyEl.innerHTML = '<p class="text-amber-500 text-xs text-center py-4">No orders ready for pickup.</p>';
+      } else {
+        readyEl.innerHTML = ready.map(order => `
+          <div class="bg-blue-50 rounded-xl p-4 border border-blue-200 flex justify-between items-center">
+            <div>
+              <div class="font-bold text-amber-900">${order.orderId}</div>
+              <div class="text-xs text-amber-600">${order.tableNumber || 'Counter'} • ${order.items.map(i => getItemEmoji(i.name) + ' ' + i.quantity + '× ' + i.name).join(', ')}</div>
+              <div class="text-xs text-amber-500">Ready ${new Date(order.readyAt).toLocaleTimeString()}</div>
+            </div>
+            <div class="flex gap-2">
+              <button onclick="pickupOrder('${order.orderId}')" class="bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">Pickup</button>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      // Render picked up queue (for serve)
+      const pickedUpEl = document.getElementById('picked-up-queue');
+      if (pickedUp.length === 0) {
+        pickedUpEl.innerHTML = '<p class="text-amber-500 text-xs text-center py-4">No orders ready to serve.</p>';
+      } else {
+        pickedUpEl.innerHTML = pickedUp.map(order => `
+          <div class="bg-emerald-50 rounded-xl p-4 border border-emerald-200 flex justify-between items-center">
+            <div>
+              <div class="font-bold text-amber-900">${order.orderId}</div>
+              <div class="text-xs text-amber-600">${order.tableNumber || 'Counter'} • ${order.items.map(i => getItemEmoji(i.name) + ' ' + i.quantity + '× ' + i.name).join(', ')}</div>
+              <div class="text-xs text-amber-500">Picked up ${new Date(order.pickedUpAt).toLocaleTimeString()}</div>
+            </div>
+            <div class="flex gap-2">
+              <button onclick="serveOrder('${order.orderId}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">Serve</button>
+            </div>
+          </div>
+        `).join('');
+      }
+    }
+
+    async function pickupOrder(orderId) {
+      const res = await CafeApi.patch(`/waiter/orders/${orderId}/pickup`, { reason: 'waiter picked up' });
+      if (res.ok) {
+        fetchOrders();
+      } else {
+        alert(res.body.message || 'Failed to pick up order');
+      }
+    }
+
+    async function serveOrder(orderId) {
+      const res = await CafeApi.patch(`/waiter/orders/${orderId}/serve`, { reason: 'waiter served' });
+      if (res.ok) {
+        fetchOrders();
+      } else {
+        alert(res.body.message || 'Failed to serve order');
+      }
+    }
+
+    // Poll every POLL_MS
+    fetchOrders();
+    pollTimer = setInterval(fetchOrders, POLL_MS);
+
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) fetchOrders();
+    });
+  </script>
+</body>
+</html>
