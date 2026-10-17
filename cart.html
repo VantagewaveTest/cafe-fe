@@ -11,7 +11,7 @@
 </head>
 <body class="bg-amber-50 min-h-screen flex flex-col font-sans pt-12">
 
-  <header class="bg-amber-900 text-amber-100 shadow-md py-4 px-6 flex justify-between items-center fixed top-0 left-0 right-0 z-40">
+  <header class="bg-amber-900 text-amber-100 shadow-md py-4 px-6 flex justify-between items-center sticky top-0 z-40">
     <div class="text-xl font-bold tracking-wider flex items-center gap-2">
       <span>☕</span> The Daily Grind Café
     </div>
@@ -33,11 +33,11 @@
     <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
       <!-- Cart Items -->
       <div id="cart-items-container" class="md:col-span-2 space-y-4">
-        <!-- Cart items rendered here -->
+        <!-- Rendered dynamically -->
       </div>
 
       <!-- Checkout -->
-      <div class="bg-white rounded-2xl p-6 shadow-md border border-amber-200 h-fit">
+      <div class="bg-white rounded-2xl p-6 shadow-md border border-amber-200 h-fit space-y-6">
         <h2 class="text-lg font-bold text-amber-900 mb-4 pb-2 border-b border-amber-100">Order Summary</h2>
 
         <div class="space-y-3 text-sm text-amber-800 mb-6">
@@ -59,7 +59,6 @@
           </div>
         </div>
 
-        <!-- Table or Counter -->
         <div class="space-y-3">
           <label class="block text-xs font-bold text-amber-900 uppercase tracking-wide mb-2">Table or Counter Pickup</div>
           <div class="space-y-2 text-sm text-amber-800">
@@ -75,7 +74,6 @@
           <input id="tableInput" type="number" min="1" max="20" placeholder="Table no. e.g. 6" class="w-full border border-amber-300 rounded-lg px-3 py-2 text-sm bg-amber-50 focus:ring-2 focus:ring-amber-500 outline-none" />
         </div>
 
-        <!-- Payment Method -->
         <div class="space-y-3">
           <label class="block text-xs font-bold text-amber-900 uppercase tracking-wide mb-2">Payment Option (Simulated)</label>
           <p class="text-xs text-amber-600">No real charge — this is a demonstration only.</p>
@@ -95,9 +93,8 @@
           </div>
         </div>
 
-        <!-- Checkout Button -->
-        <button id="checkout-btn" onclick="placeOrder()" class="w-full bg-amber-800 hover:bg-amber-900 text-white py-3 rounded-lg font-semibold shadow-lg transition flex items-center justify-center gap-2">
-          Pay &amp; Place Order
+        <button id="checkout-btn" onclick="placeOrder()" class="w-full bg-amber-800 hover:bg-amber-900 text-white py-3 rounded-xl font-semibold shadow-lg transition flex items-center justify-center gap-2">
+          Pay & Place Order
         </button>
         <p id="checkout-status" class="text-xs text-center text-amber-600 hidden"></p>
       </div>
@@ -211,7 +208,6 @@
       const tableInput = document.getElementById('tableInput').value.trim();
       const payment = document.querySelector('input[name="payment"]:checked').value;
 
-      // Validate table number when Table option is selected
       if (orderType === 'table' && !tableInput) {
         const status = document.getElementById('checkout-status');
         status.textContent = '❌ Please enter a table number before placing order.';
@@ -251,7 +247,6 @@
         if (data.ok && data.body.success) {
           const endTime = Date.now() + (data.body.totalPrepTime * 1000);
 
-          // Set active order in localStorage (estimate only — backend status is truth)
           setActiveOrder({
             orderId: data.body.orderId,
             orderAccessToken: data.body.orderAccessToken,
@@ -263,10 +258,8 @@
             status: 'PENDING'
           });
 
-          // Store order access token
           sessionStorage.setItem('orderAccessToken', data.body.orderAccessToken);
 
-          // Store ALL orders in localStorage for My Orders page
           const allOrders = JSON.parse(localStorage.getItem('all_orders') || '[]');
           allOrders.push({
             orderId: data.body.orderId,
@@ -280,7 +273,6 @@
           });
           localStorage.setItem('all_orders', JSON.stringify(allOrders));
 
-          // Clear cart
           localStorage.removeItem('cafe_cart');
           cart = {};
 
@@ -288,7 +280,6 @@
           status.classList.remove('hidden');
           status.classList.add('text-green-600', 'font-bold', 'animate-bounce');
 
-          // Redirect to My Orders after 2 seconds
           btn.textContent = 'Redirecting to My Orders...';
           btn.disabled = true;
           btn.classList.add('opacity-50', 'cursor-not-allowed');
