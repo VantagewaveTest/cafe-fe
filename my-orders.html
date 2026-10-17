@@ -31,9 +31,7 @@
     </div>
 
     <div id="orders-container" class="hidden space-y-6">
-      <div id="orders-list" class="space-y-6">
-        <!-- Orders rendered here -->
-      </div>
+      <!-- Orders rendered here -->
     </div>
   </main>
 
@@ -79,19 +77,8 @@
       return '🍽️';
     }
 
-    function getStatusIcon(status) {
-      switch(status) {
-        case 'PENDING': return '📝';
-        case 'PREPARING': return '👨‍🍳';
-        case 'READY': return '🍽️';
-        case 'PICKED_UP': return '🚚';
-        case 'SERVED': return '✅';
-        default: return '•';
-      }
-    }
-
     function loadOrders() {
-      const orders = JSON.parse(localStorage.getItem('all_orders') || '[]');
+      const allOrders = JSON.parse(localStorage.getItem('all_orders') || '[]');
       const container = document.getElementById('orders-container');
       const emptyState = document.getElementById('empty-state');
 
@@ -139,7 +126,7 @@
           <div class="flex justify-between items-start mb-6 pb-6 border-b border-amber-200">
             <div class="flex items-center gap-2">
               <div class="font-bold text-amber-900 text-lg">Order #${order.orderId}</div>
-              <span id="status-pill-${order.orderId}" class="inline-flex items-center gap-2 px-4 py-2 rounded-full font-bold text-sm shadow-sm ${statusColorClass(status)}">
+              <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full font-bold text-sm shadow-sm ${statusColorClass(status)}">
                 <span class="w-2.5 h-2.5 rounded-full ${badgeColorClass(status)} animate-pulse"></span>
                 <span id="status-text-${order.orderId}" class="font-bold text-sm">${STATUS_LABELS[status] || status}</span>
               </div>
@@ -160,11 +147,8 @@
               ${(order.items || []).map(item => `
                 <div class="flex justify-between items-center py-2 border-b border-amber-50 last:border-0">
                   <div class="flex items-center gap-3">
-                    <div class="text-2xl">${getItemEmoji(i.name)}</div>
-                    <div class="flex flex-col">
-                      <div class="text-sm font-bold text-amber-900">${i.quantity}× ${i.name}</div>
-                      <div class="text-xs text-amber-500">${i.category || ''}</div>
-                    </div>
+                    <div class="text-sm font-bold text-amber-900">${getItemEmoji(i.name)} ${i.quantity}× ${i.name}</div>
+                    <div class="text-xs text-amber-500">${i.category || ''}</div>
                   </div>
                   <span class="font-medium text-amber-900">$${(i.price * i.quantity).toFixed(2)}</span>
                 </div>
@@ -209,20 +193,51 @@
       `;
     }
 
+    function statusColorClass(status) {
+      return STATUS_COLORS[status] || 'bg-amber-100 text-amber-900';
+    }
+
+    function badgeColorClass(status) {
+      return STATUS_BADGE_COLORS[status] || 'bg-amber-500';
+    }
+
+    function renderTimelineWithOrderId(orderId, currentStatus) {
+      const currentIndex = STATUS_ORDER_LIST.indexOf(currentStatus);
+      STATUS_ORDER_LIST.forEach((status, idx) => {
+        const circle = document.getElementById(`step-${orderId}-${status.toLowerCase()}`);
+        if (circle) {
+          if (idx < currentIndex) {
+            circle.className = 'w-3 h-3 rounded-full bg-emerald-600 mx-auto shadow';
+          } else if (idx === currentIndex) {
+            circle.className = 'w-3 h-3 rounded-full bg-amber-600 mx-auto shadow animate-pulse';
+          } else {
+            circle.className = 'w-3 h-3 rounded-full bg-amber-200 mx-auto';
+          }
+        }
+      });
+    }
+
     async function pollOrderStatus() {
       const allOrders = JSON.parse(localStorage.getItem('all_orders') || '[]');
       if (!allOrders || allOrders.length === 0) return;
 
       for (const order of allOrders) {
         try {
-          const res = await CafeApi.get(`/api/orders/${order.orderId}`);
+          const r = await CafeApi.get(`/api/orders/${order.orderId}`);
           if (res.ok && res.body.success) {
-            const newStatus = res.body.order.status;
+            const dataOrder = res.body.order;
+            const newStatus = dataOrder.status;
             const currentStatus = order.status;
 
             if (newStatus !== currentStatus) {
               order.status = newStatus;
-              order.statusHistory = res.body.order.statusHistory || order.statusHistory;
+              order.statusHistory = dataOrder.statusHistory || order.statusHistory;
+              order.items = dataOrder.items || order.items;
+              order.totalAmount = dataOrder.totalAmount;
+              order.tableNumber = dataOrder.tableNumber;
+              order.pickedUpAt = dataBody.order.pickedUpAt;
+              order.readyAt = dataOrder.readyAt;
+              order.expectedDeliveredAt = dataOrder.expectedDeliveredAt;
               localStorage.setItem('all_orders', JSON.stringify(allOrders));
               updateOrderCard(order.orderId, newStatus);
             }
@@ -269,22 +284,6 @@
         const celebration = document.getElementById(`celebration-${orderId}`);
         if (celebration) celebration.classList.remove('hidden');
       }
-    }
-
-    function renderTimelineWithOrderId(orderId, currentStatus) {
-      const currentIndex = STATUS_ORDER_LIST.indexOf(currentStatus);
-      STATUS_ORDER_LIST.forEach((status, idx) => {
-        const circle = document.getElementById(`step-${orderId}-${status.toLowerCase()}`);
-        if (circle) {
-          if (idx < currentIndex) {
-            circle.className = 'w-3 h-3 rounded-full bg-emerald-600 mx-auto shadow';
-          } else if (idx === currentIndex) {
-            circle.className = 'w-3 h-3 rounded-full bg-amber-600 mx-auto shadow animate-pulse';
-          } else {
-            circle.className = 'w-3 h-3 rounded-full bg-amber-200 mx-auto';
-          }
-        }
-      });
     }
 
     function startPolling() {
